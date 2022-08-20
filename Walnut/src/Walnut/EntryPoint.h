@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef WL_PLATFORM_WINDOWS
-
 extern Walnut::Application* Walnut::CreateApplication(int argc, char** argv);
 bool g_ApplicationRunning = true;
 
@@ -21,7 +19,7 @@ namespace Walnut {
 
 }
 
-#ifdef WL_DIST
+#ifdef _WIN32
 
 #include <Windows.h>
 
@@ -30,13 +28,9 @@ int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmd
 	return Walnut::Main(__argc, __argv);
 }
 
-#else
+#endif
 
 int main(int argc, char** argv)
 {
 	return Walnut::Main(argc, argv);
 }
-
-#endif // WL_DIST
-
-#endif // WL_PLATFORM_WINDOWS
