@@ -16,4 +16,4 @@ link_libraries(glm)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Walnut)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/WalnutApp)
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/RayTracing)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/RayTracing)
