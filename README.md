@@ -8,8 +8,6 @@ Currently supports Windows, Linux - with macOS support planned.
 
 Added example RayTracing App from [TheCherno/RayTracing](https://github.com/TheCherno/RayTracing)
 
-![WalnutExample](https://hazelengine.com/images/ForestLauncherScreenshot.jpg)
-_<center>Forest Launcher - an application made with Walnut</center>_
 
 ## Requirements
 - [CMake](https://cmake.org)
