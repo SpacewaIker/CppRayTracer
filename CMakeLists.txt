@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.10)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui)
@@ -15,5 +15,4 @@ link_libraries(glm)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Walnut)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/WalnutApp)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/RayTracing)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/RayTracer)

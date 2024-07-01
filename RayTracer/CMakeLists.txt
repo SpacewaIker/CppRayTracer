@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.0.0)
-project(WalnutApp CXX)
+cmake_minimum_required(VERSION 3.10)
+project(RayTracer CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -7,8 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s")
 
 if(MINGW OR WIN32)
-    message(STATUS "WalnutApp Windows build")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mwindows")
+    message(STATUS "RayTracer Windows build")
 endif(MINGW OR WIN32)
 
 find_package(Vulkan REQUIRED)
