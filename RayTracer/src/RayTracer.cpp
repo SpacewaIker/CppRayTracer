@@ -1,83 +1,71 @@
+#include "Renderer.h"
 #include "Walnut/Application.h"
 #include "Walnut/EntryPoint.h"
-
 #include "Walnut/Image.h"
-#include "Walnut/Random.h"
 #include "Walnut/Timer.h"
 
 class ExampleLayer : public Walnut::Layer {
-private:
-  std::shared_ptr<Walnut::Image> m_Image;
-  uint32_t *m_ImageData = nullptr;
+  public:
+    virtual void OnUIRender() override {
+        // settings window
+        ImGui::Begin("Settings");
+        ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
+        ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
+        if (ImGui::Button("Render")) {
+            Render();
+        }
+        ImGui::End();
 
-  uint32_t m_ViewportWidth = 0;
-  uint32_t m_ViewportHeight = 0;
+        // viewport window
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::Begin("Viewport");
 
-  float m_LastRenderTime = 0.0f;
+        m_ViewportWidth = ImGui::GetContentRegionAvail().x;
+        m_ViewportHeight = ImGui::GetContentRegionAvail().y;
 
-public:
-  virtual void OnUIRender() override {
-    // settings window
-    ImGui::Begin("Settings");
-    ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
-    ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
-    if (ImGui::Button("Render")) {
-      Render();
-    }
-    ImGui::End();
+        auto image = m_Renderer.GetFinalImage();
+        if (image) {
+            ImGui::Image(image->GetDescriptorSet(),
+                         {(float)image->GetWidth(), (float)image->GetHeight()});
+        }
 
-    // viewport window
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("Viewport");
+        ImGui::End();
+        ImGui::PopStyleVar();
 
-    m_ViewportWidth = ImGui::GetContentRegionAvail().x;
-    m_ViewportHeight = ImGui::GetContentRegionAvail().y;
-
-    if (m_Image)
-      ImGui::Image(m_Image->GetDescriptorSet(),
-                   {(float)m_Image->GetWidth(), (float)m_Image->GetHeight()});
-
-    ImGui::End();
-    ImGui::PopStyleVar();
-
-    Render();
-  }
-
-  void Render() {
-    Walnut::Timer timer;
-
-    if (!m_Image || m_ViewportWidth != m_Image->GetWidth() ||
-        m_ViewportHeight != m_Image->GetHeight()) {
-      m_Image = std::make_shared<Walnut::Image>(
-          m_ViewportWidth, m_ViewportHeight, Walnut::ImageFormat::RGBA);
-      delete[] m_ImageData;
-      m_ImageData = new uint32_t[m_ViewportWidth * m_ViewportHeight];
+        Render();
     }
 
-    for (uint32_t i = 0; i < m_ViewportWidth * m_ViewportHeight; i++) {
-      m_ImageData[i] = Walnut::Random::UInt();
-      m_ImageData[i] |= 0xff000000;
+    void Render() {
+        Walnut::Timer timer;
+
+        m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+        m_Renderer.Render();
+
+        m_LastRenderTime = timer.ElapsedMillis();
     }
 
-    m_Image->SetData(m_ImageData);
+  private:
+    Renderer m_Renderer;
 
-    m_LastRenderTime = timer.ElapsedMillis();
-  }
+    uint32_t m_ViewportWidth = 0;
+    uint32_t m_ViewportHeight = 0;
+
+    float m_LastRenderTime = 0.0f;
 };
 
 Walnut::Application *Walnut::CreateApplication(int argc, char **argv) {
-  Walnut::ApplicationSpecification spec;
-  spec.Name = "Ray Tracer";
+    Walnut::ApplicationSpecification spec;
+    spec.Name = "Ray Tracer";
 
-  Walnut::Application *app = new Walnut::Application(spec);
-  app->PushLayer<ExampleLayer>();
-  app->SetMenubarCallback([app]() {
-    if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Exit")) {
-        app->Close();
-      }
-      ImGui::EndMenu();
-    }
-  });
-  return app;
+    Walnut::Application *app = new Walnut::Application(spec);
+    app->PushLayer<ExampleLayer>();
+    app->SetMenubarCallback([app]() {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Exit")) {
+                app->Close();
+            }
+            ImGui::EndMenu();
+        }
+    });
+    return app;
 }
