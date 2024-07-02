@@ -20,6 +20,7 @@ public:
     // settings window
     ImGui::Begin("Settings");
     ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
+    ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
     if (ImGui::Button("Render")) {
       Render();
     }
@@ -66,7 +67,7 @@ public:
 
 Walnut::Application *Walnut::CreateApplication(int argc, char **argv) {
   Walnut::ApplicationSpecification spec;
-  spec.Name = "Walnut Example";
+  spec.Name = "Ray Tracer";
 
   Walnut::Application *app = new Walnut::Application(spec);
   app->PushLayer<ExampleLayer>();
