@@ -3,10 +3,22 @@
 #include "Walnut/EntryPoint.h"
 #include "Walnut/Image.h"
 #include "Walnut/Timer.h"
+#include "toml++/toml.hpp"
 
 class ExampleLayer : public Walnut::Layer {
   public:
     virtual void OnUIRender() override {
+        // load scene
+        try {
+            toml::table table = toml::parse_file("scene.toml");
+            m_Scene = std::make_shared<toml::table>(table);
+        } catch (const toml::parse_error &err) {
+            std::cerr << "Failed to parse scene.toml: " << err << std::endl;
+            exit;
+        }
+
+        m_Renderer.SetScene(m_Scene);
+
         // settings window
         ImGui::Begin("Settings");
         ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
@@ -52,6 +64,8 @@ class ExampleLayer : public Walnut::Layer {
     uint32_t m_ViewportHeight = 0;
 
     float m_LastRenderTime = 0.0f;
+
+    std::shared_ptr<toml::table> m_Scene;
 };
 
 Walnut::Application *Walnut::CreateApplication(int argc, char **argv) {

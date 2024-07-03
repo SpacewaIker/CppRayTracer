@@ -39,7 +39,7 @@ uint32_t Renderer::PerPixel(glm::vec2 coords) {
     glm::vec3 rayDir = glm::normalize(glm::vec3{coords.x, coords.y, -1.0f});
     glm::vec3 rayOrigin = {0.0f, 0.0f, 2.0f};
 
-    float radius = 0.5f;
+    float radius = (*m_Scene)["radius"].value_or(1.0f);
     glm::vec3 sphereCenter = {0.0f, 0.0f, 0.0f};
 
     glm::vec3 oc = rayOrigin - sphereCenter;
