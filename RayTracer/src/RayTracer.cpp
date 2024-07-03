@@ -23,6 +23,13 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::Begin("Settings");
         ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
         ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
+        ImGui::Separator();
+        ImGui::Text("Lighting");
+        ImGui::SliderFloat3("Colour", &m_Renderer.m_LightColour.x, 0.0f, 1.0f);
+        ImGui::SliderFloat3("Direction", &m_Renderer.m_LightDirection.x, -1.0f, 1.0f);
+        ImGui::SliderFloat("Specular Intensity", &m_Renderer.m_LightSpecularIntensity, 0.0f, 1.0f);
+        ImGui::SliderFloat("Specular Hardness", &m_Renderer.m_LightSpecularHardness, 0.0f, 100.0f);
+        ImGui::Separator();
         if (ImGui::Button("Render")) {
             Render();
         }

@@ -4,6 +4,19 @@
 
 #include <cstdint>
 
+namespace Utils {
+static uint32_t ConvertToRGBA(const glm::vec4 &color) {
+    glm::vec4 clampedColor = glm::clamp(color, 0.0f, 1.0f);
+
+    uint8_t r = (uint8_t)(clampedColor.r * 255.0f);
+    uint8_t g = (uint8_t)(clampedColor.g * 255.0f);
+    uint8_t b = (uint8_t)(clampedColor.b * 255.0f);
+    uint8_t a = (uint8_t)(clampedColor.a * 255.0f);
+
+    return (a << 24) | (b << 16) | (g << 8) | r;
+}
+} // namespace Utils
+
 void Renderer::OnResize(uint32_t width, uint32_t height) {
     if (m_FinalImage) {
         if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height) {
@@ -28,18 +41,19 @@ void Renderer::Render() {
             // map to [-1, 1]
             coords = coords * 2.0f - 1.0f;
 
-            m_ImageData[y * m_FinalImage->GetWidth() + x] = PerPixel(coords);
+            glm::vec4 color = PerPixel(coords);
+            m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(color);
         }
     }
 
     m_FinalImage->SetData(m_ImageData);
 }
 
-uint32_t Renderer::PerPixel(glm::vec2 coords) {
-    glm::vec3 rayDir = glm::normalize(glm::vec3{coords.x, coords.y, -1.0f});
+glm::vec4 Renderer::PerPixel(glm::vec2 coords) {
+    glm::vec3 rayDir = glm::vec3(coords.x, coords.y, -1.0f);
     glm::vec3 rayOrigin = {0.0f, 0.0f, 2.0f};
 
-    float radius = (*m_Scene)["radius"].value_or(1.0f);
+    float radius = 1.0f;
     glm::vec3 sphereCenter = {0.0f, 0.0f, 0.0f};
 
     glm::vec3 oc = rayOrigin - sphereCenter;
@@ -50,22 +64,21 @@ uint32_t Renderer::PerPixel(glm::vec2 coords) {
     float discriminant = b * b - 4.0f * a * c;
 
     if (discriminant < 0.0f) {
-        return 0;
+        return glm::vec4(0);
     }
 
     float discriminantSqrt = glm::sqrt(discriminant);
-    float t1 = (-b - discriminantSqrt) / (2.0f * a);
-    float t2 = (-b + discriminantSqrt) / (2.0f * a);
-    float t = t1 < t2 ? t1 : t2;
+    float t = (-b - discriminantSqrt) / (2.0f * a);
     glm::vec3 hitPoint = rayOrigin + t * rayDir;
     glm::vec3 normal = glm::normalize(hitPoint - sphereCenter);
 
-    glm::vec3 lightDir = glm::normalize(glm::vec3{1.0f, -1.0f, 1.0f});
+    glm::vec3 lightDir = -glm::normalize(m_LightDirection);
 
     float lambert = glm::dot(normal, lightDir);
     glm::vec3 halfVector = glm::normalize(lightDir - rayDir);
-    float specular = glm::pow(glm::dot(normal, halfVector), 32.0f);
-    float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f) * 255.0f;
+    float specular =
+        m_LightSpecularIntensity * glm::pow(glm::dot(normal, halfVector), m_LightSpecularHardness);
+    float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
 
-    return 0xFF000000 | (uint32_t)intensity << 16 | (uint32_t)intensity << 8 | (uint32_t)intensity;
+    return glm::vec4(m_LightColour * intensity, 1.0f);
 }
