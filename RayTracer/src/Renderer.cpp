@@ -50,60 +50,25 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
 
 glm::vec4 Renderer::TraceRay(const Scene &scene, const Ray &ray) {
     float closestT = std::numeric_limits<float>::max();
-    const Sphere *hitSphere = nullptr;
-    const Plane *hitPlane = nullptr;
+    const Geometry *hitGeometry = nullptr;
 
-    for (const auto &shape : scene.Shapes) {
-        if (std::holds_alternative<Sphere>(shape)) {
-            const Sphere &sphere = std::get<Sphere>(shape);
+    for (const auto geometry : scene.Shapes) {
+        float t = geometry->Intersect(ray);
 
-            glm::vec3 oc = ray.Origin - sphere.Position;
-            float a = glm::dot(ray.Direction, ray.Direction);
-            float b = 2.0f * glm::dot(ray.Direction, oc);
-            float c = glm::dot(oc, oc) - sphere.Radius * sphere.Radius;
-
-            float discriminant = b * b - 4.0f * a * c;
-
-            if (discriminant < 0.0f) {
-                continue;
-            }
-
-            float discriminantSqrt = glm::sqrt(discriminant);
-            float t = (-b - discriminantSqrt) / (2.0f * a);
-
-            if (t > 0.0f && t < closestT) {
-                closestT = t;
-                hitSphere = &sphere;
-            }
-        } else if (std::holds_alternative<Plane>(shape)) {
-            const Plane &plane = std::get<Plane>(shape);
-
-            float denom = glm::dot(plane.Normal, ray.Direction);
-            if (glm::abs(denom) > 1e-6) {
-                float t = glm::dot(plane.Position - ray.Origin, plane.Normal) / denom;
-                if (t > 0.0f && t < closestT) {
-                    closestT = t;
-                    hitPlane = &plane;
-                }
-            }
+        if (t > 0.0f && t < closestT) {
+            closestT = t;
+            hitGeometry = geometry;
         }
     }
 
     // no hit
-    if (!hitSphere && !hitPlane) {
+    if (!hitGeometry) {
         return glm::vec4(0);
     }
 
     glm::vec3 hitPoint = ray.Origin + closestT * ray.Direction;
-    glm::vec3 normal;
-    glm::vec3 colour;
-    if (hitSphere) {
-        normal = glm::normalize(hitPoint - hitSphere->Position);
-        colour = hitSphere->Albedo;
-    } else {
-        normal = hitPlane->Normal;
-        colour = hitPlane->Albedo;
-    }
+    glm::vec3 normal = hitGeometry->GetNormal(hitPoint);
+    glm::vec3 colour = hitGeometry->GetAlbedo();
 
     glm::vec3 lightDir = -glm::normalize(m_LightDirection);
 

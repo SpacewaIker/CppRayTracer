@@ -1,4 +1,6 @@
 #include "Camera.h"
+#include "Geometry/Plane.h"
+#include "Geometry/Sphere.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include "Walnut/Application.h"
@@ -9,29 +11,28 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-const Scene scene{std::vector{
-    Shape(Sphere{{0.0f, 0.0f, 0.0f}, 0.5f, {1.0f, 1.0f, 1.0f}}),
-    Shape(Sphere{{1.0f, 0.0f, 0.0f}, 0.2f, {1.0f, 0.0f, 0.0f}}),
-    Shape(Plane{{0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}}),
-}};
-
 class ExampleLayer : public Walnut::Layer {
   public:
-    ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {}
+    ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
+        m_Scene.Shapes.push_back(new Sphere({0.0f, 0.0f, 0.0f}, 0.5f, {1.0f, 0.0f, 0.0f}));
+        m_Scene.Shapes.push_back(new Sphere({1.0f, 0.0f, 0.0f}, 0.5f, {0.0f, 1.0f, 0.0f}));
+        m_Scene.Shapes.push_back(
+            new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}));
+    }
 
     virtual void OnUpdate(float deltaTime) override { m_Camera.OnUpdate(deltaTime); }
 
     virtual void OnUIRender() override {
         // load scene
-        try {
-            toml::table table = toml::parse_file("scene.toml");
-            m_Scene = std::make_shared<toml::table>(table);
-        } catch (const toml::parse_error &err) {
-            std::cerr << "Failed to parse scene.toml: " << err << std::endl;
-            exit;
-        }
+        // try {
+        //     toml::table table = toml::parse_file("scene.toml");
+        //     m_Scene = std::make_shared<toml::table>(table);
+        // } catch (const toml::parse_error &err) {
+        //     std::cerr << "Failed to parse scene.toml: " << err << std::endl;
+        //     exit;
+        // }
 
-        m_Renderer.SetScene(m_Scene);
+        // m_Renderer.SetScene(m_Scene);
 
         // settings window
         ImGui::Begin("Settings");
@@ -78,7 +79,7 @@ class ExampleLayer : public Walnut::Layer {
 
         m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
         m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
-        m_Renderer.Render(scene, m_Camera);
+        m_Renderer.Render(m_Scene, m_Camera);
 
         m_LastRenderTime = timer.ElapsedMillis();
     }
@@ -86,13 +87,14 @@ class ExampleLayer : public Walnut::Layer {
   private:
     Renderer m_Renderer;
     Camera m_Camera;
+    Scene m_Scene;
 
     uint32_t m_ViewportWidth = 0;
     uint32_t m_ViewportHeight = 0;
 
     float m_LastRenderTime = 0.0f;
 
-    std::shared_ptr<toml::table> m_Scene;
+    // std::shared_ptr<toml::table> m_Scene;
 };
 
 Walnut::Application *Walnut::CreateApplication(int argc, char **argv) {
