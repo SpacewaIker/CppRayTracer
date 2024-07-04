@@ -1,12 +1,26 @@
+#include "Camera.h"
 #include "Renderer.h"
+#include "Scene.h"
 #include "Walnut/Application.h"
 #include "Walnut/EntryPoint.h"
 #include "Walnut/Image.h"
 #include "Walnut/Timer.h"
 #include "toml++/toml.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
+
+const Scene scene{std::vector{
+    Shape(Sphere{{0.0f, 0.0f, 0.0f}, 0.5f, {1.0f, 1.0f, 1.0f}}),
+    Shape(Sphere{{1.0f, 0.0f, 0.0f}, 0.2f, {1.0f, 0.0f, 0.0f}}),
+    Shape(Plane{{0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}}),
+}};
+
 class ExampleLayer : public Walnut::Layer {
   public:
+    ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {}
+
+    virtual void OnUpdate(float deltaTime) override { m_Camera.OnUpdate(deltaTime); }
+
     virtual void OnUIRender() override {
         // load scene
         try {
@@ -25,10 +39,14 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
         ImGui::Separator();
         ImGui::Text("Lighting");
-        ImGui::SliderFloat3("Colour", &m_Renderer.m_LightColour.x, 0.0f, 1.0f);
-        ImGui::SliderFloat3("Direction", &m_Renderer.m_LightDirection.x, -1.0f, 1.0f);
+        ImGui::ColorEdit3("Colour", glm::value_ptr(m_Renderer.m_LightColour));
+        ImGui::SliderFloat3("Direction", glm::value_ptr(m_Renderer.m_LightDirection), -1.0f, 1.0f);
         ImGui::SliderFloat("Specular Intensity", &m_Renderer.m_LightSpecularIntensity, 0.0f, 1.0f);
         ImGui::SliderFloat("Specular Hardness", &m_Renderer.m_LightSpecularHardness, 0.0f, 100.0f);
+        ImGui::Separator();
+        ImGui::Text("Camera");
+        ImGui::SliderFloat("Movement Speed", &m_Camera.m_MovementSpeed, 0.0f, 10.0f);
+        ImGui::SliderFloat("Mouse Sensitivity", &m_Camera.m_MouseSensitivity, 0.0f, 0.02f);
         ImGui::Separator();
         if (ImGui::Button("Render")) {
             Render();
@@ -59,13 +77,15 @@ class ExampleLayer : public Walnut::Layer {
         Walnut::Timer timer;
 
         m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
-        m_Renderer.Render();
+        m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
+        m_Renderer.Render(scene, m_Camera);
 
         m_LastRenderTime = timer.ElapsedMillis();
     }
 
   private:
     Renderer m_Renderer;
+    Camera m_Camera;
 
     uint32_t m_ViewportWidth = 0;
     uint32_t m_ViewportHeight = 0;

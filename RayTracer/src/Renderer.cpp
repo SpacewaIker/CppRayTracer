@@ -32,16 +32,15 @@ void Renderer::OnResize(uint32_t width, uint32_t height) {
     m_ImageData = new uint32_t[width * height];
 }
 
-void Renderer::Render() {
+void Renderer::Render(const Scene &scene, const Camera &camera) {
+    Ray ray;
+    ray.Origin = camera.GetPosition();
+
     for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++) {
         for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++) {
-            glm::vec2 coords = {(float)x / (float)m_FinalImage->GetWidth(),
-                                (float)y / (float)m_FinalImage->GetHeight()};
+            ray.Direction = camera.GetRayDirections()[y * m_FinalImage->GetWidth() + x];
 
-            // map to [-1, 1]
-            coords = coords * 2.0f - 1.0f;
-
-            glm::vec4 color = PerPixel(coords);
+            glm::vec4 color = TraceRay(scene, ray);
             m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(color);
         }
     }
@@ -49,36 +48,70 @@ void Renderer::Render() {
     m_FinalImage->SetData(m_ImageData);
 }
 
-glm::vec4 Renderer::PerPixel(glm::vec2 coords) {
-    glm::vec3 rayDir = glm::vec3(coords.x, coords.y, -1.0f);
-    glm::vec3 rayOrigin = {0.0f, 0.0f, 2.0f};
+glm::vec4 Renderer::TraceRay(const Scene &scene, const Ray &ray) {
+    float closestT = std::numeric_limits<float>::max();
+    const Sphere *hitSphere = nullptr;
+    const Plane *hitPlane = nullptr;
 
-    float radius = 1.0f;
-    glm::vec3 sphereCenter = {0.0f, 0.0f, 0.0f};
+    for (const auto &shape : scene.Shapes) {
+        if (std::holds_alternative<Sphere>(shape)) {
+            const Sphere &sphere = std::get<Sphere>(shape);
 
-    glm::vec3 oc = rayOrigin - sphereCenter;
-    float a = glm::dot(rayDir, rayDir);
-    float b = 2.0f * glm::dot(rayDir, oc);
-    float c = glm::dot(oc, oc) - radius * radius;
+            glm::vec3 oc = ray.Origin - sphere.Position;
+            float a = glm::dot(ray.Direction, ray.Direction);
+            float b = 2.0f * glm::dot(ray.Direction, oc);
+            float c = glm::dot(oc, oc) - sphere.Radius * sphere.Radius;
 
-    float discriminant = b * b - 4.0f * a * c;
+            float discriminant = b * b - 4.0f * a * c;
 
-    if (discriminant < 0.0f) {
+            if (discriminant < 0.0f) {
+                continue;
+            }
+
+            float discriminantSqrt = glm::sqrt(discriminant);
+            float t = (-b - discriminantSqrt) / (2.0f * a);
+
+            if (t > 0.0f && t < closestT) {
+                closestT = t;
+                hitSphere = &sphere;
+            }
+        } else if (std::holds_alternative<Plane>(shape)) {
+            const Plane &plane = std::get<Plane>(shape);
+
+            float denom = glm::dot(plane.Normal, ray.Direction);
+            if (glm::abs(denom) > 1e-6) {
+                float t = glm::dot(plane.Position - ray.Origin, plane.Normal) / denom;
+                if (t > 0.0f && t < closestT) {
+                    closestT = t;
+                    hitPlane = &plane;
+                }
+            }
+        }
+    }
+
+    // no hit
+    if (!hitSphere && !hitPlane) {
         return glm::vec4(0);
     }
 
-    float discriminantSqrt = glm::sqrt(discriminant);
-    float t = (-b - discriminantSqrt) / (2.0f * a);
-    glm::vec3 hitPoint = rayOrigin + t * rayDir;
-    glm::vec3 normal = glm::normalize(hitPoint - sphereCenter);
+    glm::vec3 hitPoint = ray.Origin + closestT * ray.Direction;
+    glm::vec3 normal;
+    glm::vec3 colour;
+    if (hitSphere) {
+        normal = glm::normalize(hitPoint - hitSphere->Position);
+        colour = hitSphere->Albedo;
+    } else {
+        normal = hitPlane->Normal;
+        colour = hitPlane->Albedo;
+    }
 
     glm::vec3 lightDir = -glm::normalize(m_LightDirection);
 
     float lambert = glm::dot(normal, lightDir);
-    glm::vec3 halfVector = glm::normalize(lightDir - rayDir);
+    glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
     float specular =
         m_LightSpecularIntensity * glm::pow(glm::dot(normal, halfVector), m_LightSpecularHardness);
     float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
 
-    return glm::vec4(m_LightColour * intensity, 1.0f);
+    return glm::vec4(colour * m_LightColour * intensity, 1.0f);
 }
