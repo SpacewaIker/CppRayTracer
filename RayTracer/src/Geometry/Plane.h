@@ -23,7 +23,8 @@ class Plane : public Geometry {
         m_HeightAxis = glm::cross(m_WidthAxis, normal);
     }
 
-    HitPayload Intersect(const Ray &ray) const override;
+    float Intersect(const Ray &ray) const override;
+    glm::vec3 GetNormal(const glm::vec3 &point) const override { return m_Normal; }
     glm::vec3 GetAlbedo(const glm::vec3 &point) const override;
 
   private:

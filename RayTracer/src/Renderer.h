@@ -22,12 +22,24 @@ class Renderer {
     std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
 
   private:
-    glm::vec4 TraceRay(const Scene &scene, const Ray &ray);
+    struct HitPayload {
+        Intersection Intersection;
+        glm::vec3 WorldPosition;
+        glm::vec3 WorldNormal;
+    };
+
+    glm::vec4 PerPixel(uint32_t x, uint32_t y); // ray gen shader
+    HitPayload TraceRay(const Ray &ray);
+    HitPayload ClosestHit(const Ray &ray, Intersection intersection);
+    HitPayload Miss(const Ray &ray);
 
   private:
     std::shared_ptr<Walnut::Image> m_FinalImage;
     uint32_t *m_ImageData = nullptr;
     std::shared_ptr<toml::table> m_Scene;
+
+    const Scene *m_ActiveScene = nullptr;
+    const Camera *m_ActiveCamera = nullptr;
 
   public:
     glm::vec3 m_LightColour{1.0f, 1.0f, 1.0f};

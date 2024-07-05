@@ -33,50 +33,78 @@ void Renderer::OnResize(uint32_t width, uint32_t height) {
 }
 
 void Renderer::Render(const Scene &scene, const Camera &camera) {
-    Ray ray;
-    ray.Origin = camera.GetPosition();
+    m_ActiveScene = &scene;
+    m_ActiveCamera = &camera;
 
     for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++) {
         for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++) {
-            ray.Direction = camera.GetRayDirections()[y * m_FinalImage->GetWidth() + x];
-
-            glm::vec4 color = TraceRay(scene, ray);
-            m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(color);
+            glm::vec4 colour = PerPixel(x, y);
+            m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(colour);
         }
     }
 
     m_FinalImage->SetData(m_ImageData);
 }
 
-glm::vec4 Renderer::TraceRay(const Scene &scene, const Ray &ray) {
-    HitPayload closestHit;
+glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
+    Ray ray;
+    ray.Origin = m_ActiveCamera->GetPosition();
+    ray.Direction = m_ActiveCamera->GetRayDirections()[y * m_FinalImage->GetWidth() + x];
+
+    Renderer::HitPayload hit = TraceRay(ray);
+
+    // no hit
+    if (hit.Intersection.GeometryIndex == -1) {
+        return glm::vec4(0);
+    }
+
+    const Geometry &closestGeometry = *m_ActiveScene->Shapes[hit.Intersection.GeometryIndex];
+    glm::vec3 colour = closestGeometry.GetAlbedo(hit.WorldPosition);
+
+    glm::vec3 lightDir = -glm::normalize(m_LightDirection);
+
+    float lambert = glm::dot(hit.WorldNormal, lightDir);
+    glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
+    float specular = m_LightSpecularIntensity *
+                     glm::pow(glm::dot(hit.WorldNormal, halfVector), m_LightSpecularHardness);
+    float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
+
+    return glm::vec4(m_LightColour * colour * intensity, 1.0f);
+}
+
+Renderer::HitPayload Renderer::TraceRay(const Ray &ray) {
+    Intersection closestHit;
     closestHit.T = std::numeric_limits<float>::max();
-    const Geometry *hitGeometry = nullptr;
 
-    for (const auto geometry : scene.Shapes) {
-        HitPayload hit = geometry->Intersect(ray);
+    for (uint32_t i = 0; i < m_ActiveScene->Shapes.size(); i++) {
+        const Geometry *geometry = m_ActiveScene->Shapes[i];
+        float t = geometry->Intersect(ray);
 
-        if (hit.T > 0.0f && hit.T < closestHit.T) {
-            closestHit = hit;
-            hitGeometry = geometry;
+        if (t > 0.0f && t < closestHit.T) {
+            closestHit.T = t;
+            closestHit.GeometryIndex = i;
         }
     }
 
     // no hit
-    if (!hitGeometry) {
-        return glm::vec4(0);
+    if (closestHit.GeometryIndex == -1) {
+        return Miss(ray);
     }
 
-    glm::vec3 hitPoint = ray.Origin + closestHit.T * ray.Direction;
-    glm::vec3 colour = hitGeometry->GetAlbedo(hitPoint);
+    return ClosestHit(ray, closestHit);
+}
 
-    glm::vec3 lightDir = -glm::normalize(m_LightDirection);
+Renderer::HitPayload Renderer::ClosestHit(const Ray &ray, Intersection intersection) {
+    const Geometry &closestGeometry = *m_ActiveScene->Shapes[intersection.GeometryIndex];
 
-    float lambert = glm::dot(closestHit.Normal, lightDir);
-    glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
-    float specular = m_LightSpecularIntensity *
-                     glm::pow(glm::dot(closestHit.Normal, halfVector), m_LightSpecularHardness);
-    float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
+    Renderer::HitPayload payload;
+    payload.Intersection = intersection;
+    payload.WorldPosition = ray.Origin + intersection.T * ray.Direction;
+    payload.WorldNormal = closestGeometry.GetNormal(payload.WorldPosition);
 
-    return glm::vec4(colour * m_LightColour * intensity, 1.0f);
+    return payload;
+}
+
+Renderer::HitPayload Renderer::Miss(const Ray &ray) {
+    return HitPayload{Intersection{-1.0f, -1}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 }

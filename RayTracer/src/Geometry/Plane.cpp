@@ -1,19 +1,17 @@
 #include "Plane.h"
 
-HitPayload Plane::Intersect(const Ray &ray) const {
+float Plane::Intersect(const Ray &ray) const {
     float denom = glm::dot(ray.Direction, m_Normal);
 
     if (std::abs(denom) > 1e-6f) {
         glm::vec3 p0l0 = m_Position - ray.Origin;
         float t = glm::dot(p0l0, m_Normal) / denom;
         if (t >= 0.0f) {
-            HitPayload hit;
-            hit.T = t;
-            hit.Normal = m_Normal;
-            return hit;
+            return t;
         }
     }
-    return NoHit;
+
+    return -1.0f;
 }
 
 glm::vec3 Plane::GetAlbedo(const glm::vec3 &point) const {
