@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include "Geometry/AABB.h"
 #include "Geometry/Plane.h"
 #include "Geometry/Sphere.h"
 #include "Renderer.h"
@@ -14,10 +15,11 @@
 class ExampleLayer : public Walnut::Layer {
   public:
     ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
-        m_Scene.Shapes.push_back(new Sphere({0.0f, 0.0f, 0.0f}, 0.5f, {1.0f, 0.0f, 0.0f}));
-        m_Scene.Shapes.push_back(new Sphere({1.0f, 0.0f, 0.0f}, 0.5f, {0.0f, 1.0f, 0.0f}));
+        m_Scene.Shapes.push_back(new Sphere({2.0f, 0.0f, 0.0f}, 0.5f, {1.0f, 0.0f, 0.0f}));
         m_Scene.Shapes.push_back(
-            new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 0.5f}));
+            new AABB({-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}));
+        m_Scene.Shapes.push_back(new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f},
+                                           {0.5f, 0.5f, 0.5f}, {0.7f, 0.7f, 0.7f}));
     }
 
     virtual void OnUpdate(float deltaTime) override { m_Camera.OnUpdate(deltaTime); }
@@ -38,17 +40,23 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::Begin("Settings");
         ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
         ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
+
         ImGui::Separator();
+
         ImGui::Text("Lighting");
         ImGui::ColorEdit3("Colour", glm::value_ptr(m_Renderer.m_LightColour));
         ImGui::SliderFloat3("Direction", glm::value_ptr(m_Renderer.m_LightDirection), -1.0f, 1.0f);
         ImGui::SliderFloat("Specular Intensity", &m_Renderer.m_LightSpecularIntensity, 0.0f, 1.0f);
         ImGui::SliderFloat("Specular Hardness", &m_Renderer.m_LightSpecularHardness, 0.0f, 100.0f);
+
         ImGui::Separator();
+
         ImGui::Text("Camera");
         ImGui::SliderFloat("Movement Speed", &m_Camera.m_MovementSpeed, 0.0f, 10.0f);
         ImGui::SliderFloat("Mouse Sensitivity", &m_Camera.m_MouseSensitivity, 0.0f, 0.02f);
+
         ImGui::Separator();
+
         if (ImGui::Button("Render")) {
             Render();
         }

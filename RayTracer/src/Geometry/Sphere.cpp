@@ -1,6 +1,6 @@
 #include "Sphere.h"
 
-float Sphere::Intersect(const Ray &ray) const {
+HitPayload Sphere::Intersect(const Ray &ray) const {
     glm::vec3 oc = ray.Origin - this->m_Position;
     float a = glm::dot(ray.Direction, ray.Direction);
     float b = 2.0f * glm::dot(ray.Direction, oc);
@@ -9,14 +9,14 @@ float Sphere::Intersect(const Ray &ray) const {
     float discriminant = b * b - 4.0f * a * c;
 
     if (discriminant < 0.0f) {
-        return -1.0f;
+        return NoHit;
     }
 
-    float discriminantSqrt = glm::sqrt(discriminant);
-    float t = (-b - discriminantSqrt) / (2.0f * a);
-    return t;
-}
+    HitPayload hit;
 
-glm::vec3 Sphere::GetNormal(const glm::vec3 &point) const {
-    return glm::normalize(point - this->m_Position);
+    float discriminantSqrt = glm::sqrt(discriminant);
+    hit.T = (-b - discriminantSqrt) / (2.0f * a);
+    hit.Normal = glm::normalize(ray.Origin + hit.T * ray.Direction - this->m_Position);
+
+    return hit;
 }

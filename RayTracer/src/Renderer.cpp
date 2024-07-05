@@ -49,14 +49,15 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
 }
 
 glm::vec4 Renderer::TraceRay(const Scene &scene, const Ray &ray) {
-    float closestT = std::numeric_limits<float>::max();
+    HitPayload closestHit;
+    closestHit.T = std::numeric_limits<float>::max();
     const Geometry *hitGeometry = nullptr;
 
     for (const auto geometry : scene.Shapes) {
-        float t = geometry->Intersect(ray);
+        HitPayload hit = geometry->Intersect(ray);
 
-        if (t > 0.0f && t < closestT) {
-            closestT = t;
+        if (hit.T > 0.0f && hit.T < closestHit.T) {
+            closestHit = hit;
             hitGeometry = geometry;
         }
     }
@@ -66,16 +67,15 @@ glm::vec4 Renderer::TraceRay(const Scene &scene, const Ray &ray) {
         return glm::vec4(0);
     }
 
-    glm::vec3 hitPoint = ray.Origin + closestT * ray.Direction;
-    glm::vec3 normal = hitGeometry->GetNormal(hitPoint);
-    glm::vec3 colour = hitGeometry->GetAlbedo();
+    glm::vec3 hitPoint = ray.Origin + closestHit.T * ray.Direction;
+    glm::vec3 colour = hitGeometry->GetAlbedo(hitPoint);
 
     glm::vec3 lightDir = -glm::normalize(m_LightDirection);
 
-    float lambert = glm::dot(normal, lightDir);
+    float lambert = glm::dot(closestHit.Normal, lightDir);
     glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
-    float specular =
-        m_LightSpecularIntensity * glm::pow(glm::dot(normal, halfVector), m_LightSpecularHardness);
+    float specular = m_LightSpecularIntensity *
+                     glm::pow(glm::dot(closestHit.Normal, halfVector), m_LightSpecularHardness);
     float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
 
     return glm::vec4(colour * m_LightColour * intensity, 1.0f);
