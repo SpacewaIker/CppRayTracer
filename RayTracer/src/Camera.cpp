@@ -14,7 +14,7 @@ Camera::Camera(float verticalFOV, float nearPlane, float farPlane)
     m_ForwardDirection = glm::vec3(0.0f, 0.0f, -1.0f);
 }
 
-void Camera::OnUpdate(float deltaTime) {
+bool Camera::OnUpdate(float deltaTime) {
     glm::vec2 mousePosition = Walnut::Input::GetMousePosition();
     glm::vec2 delta = (mousePosition - m_LastMousePosition) * m_MouseSensitivity;
     m_LastMousePosition = mousePosition;
@@ -22,7 +22,7 @@ void Camera::OnUpdate(float deltaTime) {
     // if mouse is not pressed, do nothing
     if (!Walnut::Input::IsMouseButtonDown(Walnut::MouseButton::Right)) {
         Walnut::Input::SetCursorMode(Walnut::CursorMode::Normal);
-        return;
+        return false;
     }
 
     // restores cursor position when the button is released
@@ -70,6 +70,8 @@ void Camera::OnUpdate(float deltaTime) {
         RecalculateViewMatrix();
         RecalculateRayDirections();
     }
+
+    return moved;
 }
 
 void Camera::OnResize(uint32_t width, uint32_t height) {

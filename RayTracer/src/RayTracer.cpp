@@ -15,17 +15,36 @@
 class ExampleLayer : public Walnut::Layer {
   public:
     ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
-        m_Scene.Materials.push_back(Material{{1.0f, 0.3f, 0.3f}, 0.2f, 0.5f});
-        m_Scene.Materials.push_back(Material{{0.3f, 1.0f, 0.3f}, 0.2f, 0.0f});
-        m_Scene.Materials.push_back(Material{{0.5f, 0.5f, 0.5f}, 0.5f, 0.0f});
-        m_Scene.Materials.push_back(Material{{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f});
+        m_Scene.Materials.push_back(Material{{1.0f, 0.3f, 0.3f}, 0.8f, 0.0f}); // red
+        m_Scene.Materials.push_back(Material{{0.3f, 1.0f, 0.3f}, 0.1f, 0.0f}); // green
+        m_Scene.Materials.push_back(Material{{0.5f, 0.5f, 0.5f}, 0.5f, 0.0f}); // dark grey
+        m_Scene.Materials.push_back(Material{{0.7f, 0.7f, 0.7f}, 0.3f, 0.0f}); // light grey
 
         m_Scene.Geometry.push_back(new Sphere({1.0f, 0.0f, -1.0f}, 0.5f, 0));
         m_Scene.Geometry.push_back(new AABB({-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}, 1));
         m_Scene.Geometry.push_back(new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, 2, 3));
+
+        {
+            Light light;
+            light.Type = LightType::Directional;
+            light.Direction = glm::normalize(glm::vec3{-0.7f, -1.0f, 0.4f});
+            light.Intensity = 0.7;
+            m_Scene.Lights.push_back(light);
+        }
+        {
+            Light light;
+            light.Type = LightType::Point;
+            light.Position = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
+            light.Intensity = 0.7;
+            m_Scene.Lights.push_back(light);
+        }
     }
 
-    virtual void OnUpdate(float deltaTime) override { m_Camera.OnUpdate(deltaTime); }
+    virtual void OnUpdate(float deltaTime) override {
+        if (m_Camera.OnUpdate(deltaTime)) {
+            m_Renderer.ResetFrameIndex();
+        }
+    }
 
     virtual void OnUIRender() override {
         // load scene
@@ -44,17 +63,17 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
         ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
         ImGui::Text("Render Resolution: %dx%d", m_ViewportWidth, m_ViewportHeight);
-        ImGui::SliderFloat("Render Scale", &m_Renderer.m_RenderScale, 0.1f, 1.0f);
-        ImGui::SliderInt("Max Bounces", &m_Renderer.m_MaxBounces, 1, 10);
+        ImGui::SliderFloat("Render Scale", &m_Renderer.GetSettings().RenderScale, 0.1f, 1.0f);
+        ImGui::SliderInt("Max Bounces", &m_Renderer.GetSettings().MaxBounces, 1, 10);
+        ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().Accumulate);
+        if (ImGui::Button("Reset")) {
+            m_Renderer.ResetFrameIndex();
+        }
 
         ImGui::Separator();
 
         ImGui::Text("Lighting");
-        ImGui::ColorEdit3("Sky Colour", glm::value_ptr(m_Renderer.m_SkyColour));
-        ImGui::ColorEdit3("Colour", glm::value_ptr(m_Renderer.m_LightColour));
-        ImGui::SliderFloat3("Direction", glm::value_ptr(m_Renderer.m_LightDirection), -1.0f, 1.0f);
-        ImGui::SliderFloat("Specular Intensity", &m_Renderer.m_LightSpecularIntensity, 0.0f, 1.0f);
-        ImGui::SliderFloat("Specular Hardness", &m_Renderer.m_LightSpecularHardness, 0.0f, 100.0f);
+        ImGui::ColorEdit3("Sky Colour", glm::value_ptr(m_Scene.SkyColour));
 
         ImGui::Separator();
 
@@ -62,19 +81,16 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::SliderFloat("Movement Speed", &m_Camera.m_MovementSpeed, 0.0f, 10.0f);
         ImGui::SliderFloat("Mouse Sensitivity", &m_Camera.m_MouseSensitivity, 0.0f, 0.02f);
 
-        ImGui::Separator();
-
-        if (ImGui::Button("Render")) {
-            Render();
-        }
         ImGui::End();
 
         // viewport window
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("Viewport");
 
-        m_ViewportWidth = (uint32_t)(m_Renderer.m_RenderScale * ImGui::GetContentRegionAvail().x);
-        m_ViewportHeight = (uint32_t)(m_Renderer.m_RenderScale * ImGui::GetContentRegionAvail().y);
+        m_ViewportWidth =
+            (uint32_t)(m_Renderer.GetSettings().RenderScale * ImGui::GetContentRegionAvail().x);
+        m_ViewportHeight =
+            (uint32_t)(m_Renderer.GetSettings().RenderScale * ImGui::GetContentRegionAvail().y);
 
         auto image = m_Renderer.GetFinalImage();
         if (image) {

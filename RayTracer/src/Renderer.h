@@ -11,15 +11,25 @@
 
 class Renderer {
   public:
+    struct Settings {
+        bool Accumulate = true;
+        int MaxBounces = 5;
+        float RenderScale = 0.5f;
+    };
+
+  public:
     Renderer() = default;
 
     void Render(const Scene &scene, const Camera &camera);
-
     void OnResize(uint32_t width, uint32_t height);
 
     void SetScene(std::shared_ptr<toml::table> scene) { m_Scene = scene; }
 
     std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
+
+    void ResetFrameIndex() { m_FrameIndex = 1; }
+
+    Settings &GetSettings() { return m_Settings; }
 
   private:
     struct HitPayload {
@@ -33,22 +43,19 @@ class Renderer {
     HitPayload ClosestHit(const Ray &ray, Intersection intersection);
     HitPayload Miss(const Ray &ray);
     bool TraceShadowRay(const Ray &ray);
+    glm::vec3 CalculateLighting(const HitPayload &hit, const Light &light);
 
   private:
+    Settings m_Settings;
+
     std::shared_ptr<Walnut::Image> m_FinalImage;
     uint32_t *m_ImageData = nullptr;
+    glm::vec4 *m_AccumulationData = nullptr;
+
+    uint32_t m_FrameIndex = 1;
+
     std::shared_ptr<toml::table> m_Scene;
 
     const Scene *m_ActiveScene = nullptr;
     const Camera *m_ActiveCamera = nullptr;
-
-  public:
-    glm::vec3 m_SkyColour{0.5f, 0.7f, 0.9f};
-    glm::vec3 m_LightColour{1.0f, 1.0f, 1.0f};
-    glm::vec3 m_LightDirection{0.5f, -0.8f, -1.0f};
-    float m_LightSpecularIntensity = 0.5;
-    float m_LightSpecularHardness = 32.0f;
-
-    int m_MaxBounces = 2;
-    float m_RenderScale = 0.5f;
 };

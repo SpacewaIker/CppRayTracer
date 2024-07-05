@@ -7,7 +7,7 @@ class Camera {
   public:
     Camera(float verticalFOV, float nearPlane, float farPlane);
 
-    void OnUpdate(float deltaTime);
+    bool OnUpdate(float deltaTime);
     void OnResize(uint32_t width, uint32_t height);
 
     const glm::mat4 &GetProjectionMatrix() const { return m_ProjectionMatrix; }

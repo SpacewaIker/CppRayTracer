@@ -4,6 +4,7 @@
 #include "glm/geometric.hpp"
 
 #include <cstdint>
+#include <cstring>
 
 namespace Utils {
 static uint32_t ConvertToRGBA(const glm::vec4 &color) {
@@ -31,66 +32,72 @@ void Renderer::OnResize(uint32_t width, uint32_t height) {
 
     delete[] m_ImageData;
     m_ImageData = new uint32_t[width * height];
+
+    delete[] m_AccumulationData;
+    m_AccumulationData = new glm::vec4[width * height];
+
+    ResetFrameIndex();
 }
 
 void Renderer::Render(const Scene &scene, const Camera &camera) {
     m_ActiveScene = &scene;
     m_ActiveCamera = &camera;
 
+    if (m_FrameIndex == 1) {
+        memset(m_AccumulationData, 0,
+               m_FinalImage->GetWidth() * m_FinalImage->GetHeight() * sizeof(glm::vec4));
+    }
+
     for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++) {
         for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++) {
             glm::vec4 colour = PerPixel(x, y);
-            m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(colour);
+
+            m_AccumulationData[y * m_FinalImage->GetWidth() + x] += colour;
+
+            glm::vec4 accumulatedColour =
+                m_AccumulationData[y * m_FinalImage->GetWidth() + x] / (float)m_FrameIndex;
+
+            m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(accumulatedColour);
         }
     }
 
     m_FinalImage->SetData(m_ImageData);
+
+    if (m_Settings.Accumulate) {
+        m_FrameIndex++;
+    } else {
+        m_FrameIndex = 1;
+    }
 }
 
 glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
     Ray ray;
-    ray.Origin = m_ActiveCamera->GetPosition();
+    ray.Origin = m_ActiveCamera->GetPosition() + Walnut::Random::Vec3(-0.003f, 0.003f);
     ray.Direction = m_ActiveCamera->GetRayDirections()[y * m_FinalImage->GetWidth() + x];
 
     glm::vec3 colour = glm::vec3(0.0f);
     float multiplier = 0.9f;
 
-    for (int _i = 0; _i < m_MaxBounces; _i++) {
+    for (int _i = 0; _i < m_Settings.MaxBounces; _i++) {
         Renderer::HitPayload hit = TraceRay(ray);
 
         // no hit
         if (hit.Intersection.GeometryIndex == -1) {
-            colour += m_SkyColour * multiplier;
+            colour += m_ActiveScene->SkyColour * multiplier;
             break;
         }
 
-        // shadow
-        Ray shadowRay;
-        shadowRay.Direction = -m_LightDirection;
-        shadowRay.Origin = hit.WorldPosition + hit.WorldNormal * 0.001f;
+        for (const auto &light : m_ActiveScene->Lights) {
+            glm::vec3 lightColour = CalculateLighting(hit, light);
+            colour += lightColour * multiplier;
+        }
 
-        glm::vec3 partialColour = glm::vec3(0.0f);
-
-        // if (!TraceShadowRay(shadowRay)) { // not in shadow
-        glm::vec3 lightDir = -glm::normalize(m_LightDirection);
-        float lambert = glm::dot(hit.WorldNormal, lightDir);
-        glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
-        float specular = m_LightSpecularIntensity *
-                         glm::pow(glm::dot(hit.WorldNormal, halfVector), m_LightSpecularHardness);
-        float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
-
-        partialColour += m_LightColour * intensity;
-        // }
+        multiplier *= 0.4;
 
         int materialIndex =
             m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(
                 hit.WorldPosition);
         Material material = m_ActiveScene->Materials[materialIndex];
-
-        partialColour *=
-            glm::vec3(material.Metallic) + material.Albedo * (1.0f - material.Metallic);
-        colour += partialColour * multiplier;
-        multiplier *= 0.4;
 
         ray.Origin = hit.WorldPosition + hit.WorldNormal * 0.0001f;
         glm::vec3 roughNormal =
@@ -148,4 +155,31 @@ bool Renderer::TraceShadowRay(const Ray &ray) {
     }
 
     return false;
+}
+
+glm::vec3 Renderer::CalculateLighting(const HitPayload &hit, const Light &light) {
+    // shadow
+    Ray shadowRay;
+    shadowRay.Origin = hit.WorldPosition + hit.WorldNormal * 0.0001f;
+
+    if (light.Type == LightType::Point) {
+        shadowRay.Direction = glm::normalize(light.Position - hit.WorldPosition);
+    } else if (light.Type == LightType::Directional) {
+        shadowRay.Direction = -light.Direction;
+    }
+
+    if (TraceShadowRay(shadowRay)) {
+        return glm::vec3(0.0f);
+    }
+
+    glm::vec3 lightDir = glm::normalize(shadowRay.Direction);
+    float lambert = glm::max(0.0f, glm::dot(hit.WorldNormal, lightDir));
+
+    int materialIndex = m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(
+        hit.WorldPosition);
+    Material material = m_ActiveScene->Materials[materialIndex];
+
+    glm::vec3 colour = material.Albedo * light.Colour * light.Intensity * lambert;
+
+    return colour;
 }
