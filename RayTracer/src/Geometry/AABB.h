@@ -4,8 +4,8 @@
 
 class AABB : public Geometry {
   public:
-    AABB(const glm::vec3 &min, const glm::vec3 &max, const glm::vec3 &albedo)
-        : m_Min(min), m_Max(max), Geometry(albedo) {}
+    AABB(const glm::vec3 &min, const glm::vec3 &max, int materialIndex)
+        : m_Min(min), m_Max(max), Geometry(materialIndex) {}
 
     float Intersect(const Ray &ray) const override;
     glm::vec3 GetNormal(const glm::vec3 &point) const override;

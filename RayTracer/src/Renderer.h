@@ -43,11 +43,12 @@ class Renderer {
     const Camera *m_ActiveCamera = nullptr;
 
   public:
-    glm::vec3 m_AmbientColour{0.1f, 0.1f, 0.1f};
+    glm::vec3 m_SkyColour{0.5f, 0.7f, 0.9f};
     glm::vec3 m_LightColour{1.0f, 1.0f, 1.0f};
     glm::vec3 m_LightDirection{0.5f, -0.8f, -1.0f};
     float m_LightSpecularIntensity = 0.5;
     float m_LightSpecularHardness = 32.0f;
 
+    int m_MaxBounces = 2;
     float m_RenderScale = 0.5f;
 };

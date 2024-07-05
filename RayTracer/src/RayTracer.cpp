@@ -15,11 +15,14 @@
 class ExampleLayer : public Walnut::Layer {
   public:
     ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
-        m_Scene.Shapes.push_back(new Sphere({1.0f, 0.0f, -1.0f}, 0.5f, {1.0f, 0.0f, 0.0f}));
-        m_Scene.Shapes.push_back(
-            new AABB({-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}));
-        m_Scene.Shapes.push_back(new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f},
-                                           {0.5f, 0.5f, 0.5f}, {0.7f, 0.7f, 0.7f}));
+        m_Scene.Materials.push_back(Material{{1.0f, 0.3f, 0.3f}, 0.2f, 0.5f});
+        m_Scene.Materials.push_back(Material{{0.3f, 1.0f, 0.3f}, 0.2f, 0.0f});
+        m_Scene.Materials.push_back(Material{{0.5f, 0.5f, 0.5f}, 0.5f, 0.0f});
+        m_Scene.Materials.push_back(Material{{0.7f, 0.7f, 0.7f}, 0.0f, 0.0f});
+
+        m_Scene.Geometry.push_back(new Sphere({1.0f, 0.0f, -1.0f}, 0.5f, 0));
+        m_Scene.Geometry.push_back(new AABB({-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}, 1));
+        m_Scene.Geometry.push_back(new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, 2, 3));
     }
 
     virtual void OnUpdate(float deltaTime) override { m_Camera.OnUpdate(deltaTime); }
@@ -42,11 +45,12 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
         ImGui::Text("Render Resolution: %dx%d", m_ViewportWidth, m_ViewportHeight);
         ImGui::SliderFloat("Render Scale", &m_Renderer.m_RenderScale, 0.1f, 1.0f);
+        ImGui::SliderInt("Max Bounces", &m_Renderer.m_MaxBounces, 1, 10);
 
         ImGui::Separator();
 
         ImGui::Text("Lighting");
-        ImGui::ColorEdit3("Ambient Colour", glm::value_ptr(m_Renderer.m_AmbientColour));
+        ImGui::ColorEdit3("Sky Colour", glm::value_ptr(m_Renderer.m_SkyColour));
         ImGui::ColorEdit3("Colour", glm::value_ptr(m_Renderer.m_LightColour));
         ImGui::SliderFloat3("Direction", glm::value_ptr(m_Renderer.m_LightDirection), -1.0f, 1.0f);
         ImGui::SliderFloat("Specular Intensity", &m_Renderer.m_LightSpecularIntensity, 0.0f, 1.0f);

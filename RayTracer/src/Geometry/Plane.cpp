@@ -14,9 +14,9 @@ float Plane::Intersect(const Ray &ray) const {
     return -1.0f;
 }
 
-glm::vec3 Plane::GetAlbedo(const glm::vec3 &point) const {
-    if (m_Albedo2 == glm::vec3(-1.0f)) {
-        return m_Albedo;
+int Plane::GetMaterialIndex(const glm::vec3 &point) const {
+    if (m_MaterialIndex2 == -1) {
+        return m_MaterialIndex;
     }
 
     glm::vec3 p = point - glm::dot(point - m_Position, m_Normal) * m_Normal;
@@ -28,8 +28,8 @@ glm::vec3 Plane::GetAlbedo(const glm::vec3 &point) const {
     int i = (int)(dx + dz);
 
     if (i % 2) {
-        return m_Albedo;
+        return m_MaterialIndex;
     } else {
-        return m_Albedo2;
+        return m_MaterialIndex2;
     }
 }

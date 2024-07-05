@@ -1,5 +1,6 @@
 #include "Renderer.h"
 
+#include "Walnut/Random.h"
 #include "glm/geometric.hpp"
 
 #include <cstdint>
@@ -51,21 +52,26 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
     ray.Origin = m_ActiveCamera->GetPosition();
     ray.Direction = m_ActiveCamera->GetRayDirections()[y * m_FinalImage->GetWidth() + x];
 
-    Renderer::HitPayload hit = TraceRay(ray);
+    glm::vec3 colour = glm::vec3(0.0f);
+    float multiplier = 0.9f;
 
-    // no hit
-    if (hit.Intersection.GeometryIndex == -1) {
-        return glm::vec4(0);
-    }
+    for (int _i = 0; _i < m_MaxBounces; _i++) {
+        Renderer::HitPayload hit = TraceRay(ray);
 
-    glm::vec3 colour = m_AmbientColour;
+        // no hit
+        if (hit.Intersection.GeometryIndex == -1) {
+            colour += m_SkyColour * multiplier;
+            break;
+        }
 
-    // shadow
-    Ray shadowRay;
-    shadowRay.Direction = -m_LightDirection;
-    shadowRay.Origin = hit.WorldPosition + hit.WorldNormal * 0.001f;
+        // shadow
+        Ray shadowRay;
+        shadowRay.Direction = -m_LightDirection;
+        shadowRay.Origin = hit.WorldPosition + hit.WorldNormal * 0.001f;
 
-    if (!TraceShadowRay(shadowRay)) { // not in shadow
+        glm::vec3 partialColour = glm::vec3(0.0f);
+
+        // if (!TraceShadowRay(shadowRay)) { // not in shadow
         glm::vec3 lightDir = -glm::normalize(m_LightDirection);
         float lambert = glm::dot(hit.WorldNormal, lightDir);
         glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
@@ -73,20 +79,34 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
                          glm::pow(glm::dot(hit.WorldNormal, halfVector), m_LightSpecularHardness);
         float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
 
-        colour += m_LightColour * intensity;
+        partialColour += m_LightColour * intensity;
+        // }
+
+        int materialIndex =
+            m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(
+                hit.WorldPosition);
+        Material material = m_ActiveScene->Materials[materialIndex];
+
+        partialColour *=
+            glm::vec3(material.Metallic) + material.Albedo * (1.0f - material.Metallic);
+        colour += partialColour * multiplier;
+        multiplier *= 0.4;
+
+        ray.Origin = hit.WorldPosition + hit.WorldNormal * 0.0001f;
+        glm::vec3 roughNormal =
+            hit.WorldNormal + material.Roughness * Walnut::Random::Vec3(-0.5, 0.5);
+        ray.Direction = glm::reflect(ray.Direction, roughNormal);
     }
 
-    glm::vec3 albedo =
-        m_ActiveScene->Shapes[hit.Intersection.GeometryIndex]->GetAlbedo(hit.WorldPosition);
-    return glm::vec4(colour * albedo, 1.0f);
+    return glm::vec4(colour, 1.0f);
 }
 
 Renderer::HitPayload Renderer::TraceRay(const Ray &ray) {
     Intersection closestHit;
     closestHit.T = std::numeric_limits<float>::max();
 
-    for (uint32_t i = 0; i < m_ActiveScene->Shapes.size(); i++) {
-        const Geometry *geometry = m_ActiveScene->Shapes[i];
+    for (uint32_t i = 0; i < m_ActiveScene->Geometry.size(); i++) {
+        const Geometry *geometry = m_ActiveScene->Geometry[i];
         float t = geometry->Intersect(ray);
 
         if (t > 0.0f && t < closestHit.T) {
@@ -104,7 +124,7 @@ Renderer::HitPayload Renderer::TraceRay(const Ray &ray) {
 }
 
 Renderer::HitPayload Renderer::ClosestHit(const Ray &ray, Intersection intersection) {
-    const Geometry &closestGeometry = *m_ActiveScene->Shapes[intersection.GeometryIndex];
+    const Geometry &closestGeometry = *m_ActiveScene->Geometry[intersection.GeometryIndex];
 
     Renderer::HitPayload payload;
     payload.Intersection = intersection;
@@ -119,7 +139,7 @@ Renderer::HitPayload Renderer::Miss(const Ray &ray) {
 }
 
 bool Renderer::TraceShadowRay(const Ray &ray) {
-    for (const auto geometry : m_ActiveScene->Shapes) {
+    for (const auto geometry : m_ActiveScene->Geometry) {
         float t = geometry->Intersect(ray);
 
         if (t > 0.0f) {
