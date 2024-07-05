@@ -15,7 +15,7 @@
 class ExampleLayer : public Walnut::Layer {
   public:
     ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
-        m_Scene.Shapes.push_back(new Sphere({2.0f, 0.0f, 0.0f}, 0.5f, {1.0f, 0.0f, 0.0f}));
+        m_Scene.Shapes.push_back(new Sphere({1.0f, 0.0f, -1.0f}, 0.5f, {1.0f, 0.0f, 0.0f}));
         m_Scene.Shapes.push_back(
             new AABB({-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}));
         m_Scene.Shapes.push_back(new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f},
@@ -46,6 +46,7 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::Separator();
 
         ImGui::Text("Lighting");
+        ImGui::ColorEdit3("Ambient Colour", glm::value_ptr(m_Renderer.m_AmbientColour));
         ImGui::ColorEdit3("Colour", glm::value_ptr(m_Renderer.m_LightColour));
         ImGui::SliderFloat3("Direction", glm::value_ptr(m_Renderer.m_LightDirection), -1.0f, 1.0f);
         ImGui::SliderFloat("Specular Intensity", &m_Renderer.m_LightSpecularIntensity, 0.0f, 1.0f);

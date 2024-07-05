@@ -58,18 +58,27 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
         return glm::vec4(0);
     }
 
-    const Geometry &closestGeometry = *m_ActiveScene->Shapes[hit.Intersection.GeometryIndex];
-    glm::vec3 colour = closestGeometry.GetAlbedo(hit.WorldPosition);
+    glm::vec3 colour = m_AmbientColour;
 
-    glm::vec3 lightDir = -glm::normalize(m_LightDirection);
+    // shadow
+    Ray shadowRay;
+    shadowRay.Direction = -m_LightDirection;
+    shadowRay.Origin = hit.WorldPosition + hit.WorldNormal * 0.001f;
 
-    float lambert = glm::dot(hit.WorldNormal, lightDir);
-    glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
-    float specular = m_LightSpecularIntensity *
-                     glm::pow(glm::dot(hit.WorldNormal, halfVector), m_LightSpecularHardness);
-    float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
+    if (!TraceShadowRay(shadowRay)) { // not in shadow
+        glm::vec3 lightDir = -glm::normalize(m_LightDirection);
+        float lambert = glm::dot(hit.WorldNormal, lightDir);
+        glm::vec3 halfVector = glm::normalize(lightDir - ray.Direction);
+        float specular = m_LightSpecularIntensity *
+                         glm::pow(glm::dot(hit.WorldNormal, halfVector), m_LightSpecularHardness);
+        float intensity = glm::clamp(lambert + specular, 0.0f, 1.0f);
 
-    return glm::vec4(m_LightColour * colour * intensity, 1.0f);
+        colour += m_LightColour * intensity;
+    }
+
+    glm::vec3 albedo =
+        m_ActiveScene->Shapes[hit.Intersection.GeometryIndex]->GetAlbedo(hit.WorldPosition);
+    return glm::vec4(colour * albedo, 1.0f);
 }
 
 Renderer::HitPayload Renderer::TraceRay(const Ray &ray) {
@@ -107,4 +116,16 @@ Renderer::HitPayload Renderer::ClosestHit(const Ray &ray, Intersection intersect
 
 Renderer::HitPayload Renderer::Miss(const Ray &ray) {
     return HitPayload{Intersection{-1.0f, -1}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
+}
+
+bool Renderer::TraceShadowRay(const Ray &ray) {
+    for (const auto geometry : m_ActiveScene->Shapes) {
+        float t = geometry->Intersect(ray);
+
+        if (t > 0.0f) {
+            return true;
+        }
+    }
+
+    return false;
 }
