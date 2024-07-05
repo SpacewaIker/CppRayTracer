@@ -40,6 +40,8 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::Begin("Settings");
         ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
         ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
+        ImGui::Text("Render Resolution: %dx%d", m_ViewportWidth, m_ViewportHeight);
+        ImGui::SliderFloat("Render Scale", &m_Renderer.m_RenderScale, 0.1f, 1.0f);
 
         ImGui::Separator();
 
@@ -66,13 +68,12 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("Viewport");
 
-        m_ViewportWidth = ImGui::GetContentRegionAvail().x;
-        m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+        m_ViewportWidth = (uint32_t)(m_Renderer.m_RenderScale * ImGui::GetContentRegionAvail().x);
+        m_ViewportHeight = (uint32_t)(m_Renderer.m_RenderScale * ImGui::GetContentRegionAvail().y);
 
         auto image = m_Renderer.GetFinalImage();
         if (image) {
-            ImGui::Image(image->GetDescriptorSet(),
-                         {(float)image->GetWidth(), (float)image->GetHeight()}, ImVec2(0, 1),
+            ImGui::Image(image->GetDescriptorSet(), ImGui::GetContentRegionAvail(), ImVec2(0, 1),
                          ImVec2(1, 0));
         }
 

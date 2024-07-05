@@ -34,4 +34,6 @@ class Renderer {
     glm::vec3 m_LightDirection{1.0f, -1.0f, -1.0f};
     float m_LightSpecularIntensity = 0.5;
     float m_LightSpecularHardness = 32.0f;
+
+    float m_RenderScale = 0.5f;
 };
