@@ -8,13 +8,15 @@
 #include "Walnut/EntryPoint.h"
 #include "Walnut/Image.h"
 #include "Walnut/Timer.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 #include "toml++/toml.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
-class ExampleLayer : public Walnut::Layer {
+class MainLayer : public Walnut::Layer {
   public:
-    ExampleLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
+    MainLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
         m_Scene.Materials.push_back(Material{{1.0f, 0.3f, 0.3f}, 0.8f, 0.0f}); // red
         m_Scene.Materials.push_back(Material{{0.3f, 1.0f, 0.3f}, 0.1f, 0.0f}); // green
         m_Scene.Materials.push_back(Material{{0.5f, 0.5f, 0.5f}, 0.5f, 0.0f}); // dark grey
@@ -81,6 +83,24 @@ class ExampleLayer : public Walnut::Layer {
         ImGui::SliderFloat("Movement Speed", &m_Camera.m_MovementSpeed, 0.0f, 10.0f);
         ImGui::SliderFloat("Mouse Sensitivity", &m_Camera.m_MouseSensitivity, 0.0f, 0.02f);
 
+        ImGui::Separator();
+
+        ImGui::Text("Save Image");
+        ImGui::InputText("Filename", m_SaveFilename, 256);
+        if (ImGui::Button("Save Image")) {
+            auto image = m_Renderer.GetImageData();
+            if (image) {
+                uint32_t *flippedImage = new uint32_t[m_ViewportWidth * m_ViewportHeight];
+                for (uint32_t y = 0; y < m_ViewportHeight; y++) {
+                    memcpy(&flippedImage[y * m_ViewportWidth],
+                           &image[(m_ViewportHeight - y - 1) * m_ViewportWidth],
+                           m_ViewportWidth * 4);
+                }
+                stbi_write_png(m_SaveFilename, m_ViewportWidth, m_ViewportHeight, 4, flippedImage,
+                               m_ViewportWidth * 4);
+            }
+        }
+
         ImGui::End();
 
         // viewport window
@@ -124,6 +144,8 @@ class ExampleLayer : public Walnut::Layer {
 
     float m_LastRenderTime = 0.0f;
 
+    char m_SaveFilename[256] = "output.png";
+
     // std::shared_ptr<toml::table> m_Scene;
 };
 
@@ -132,7 +154,7 @@ Walnut::Application *Walnut::CreateApplication(int argc, char **argv) {
     spec.Name = "Ray Tracer";
 
     Walnut::Application *app = new Walnut::Application(spec);
-    app->PushLayer<ExampleLayer>();
+    app->PushLayer<MainLayer>();
     app->SetMenubarCallback([app]() {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Exit")) {

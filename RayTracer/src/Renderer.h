@@ -30,6 +30,7 @@ class Renderer {
     void ResetFrameIndex() { m_FrameIndex = 1; }
 
     Settings &GetSettings() { return m_Settings; }
+    uint32_t *GetImageData() { return m_ImageData; }
 
   private:
     struct HitPayload {
