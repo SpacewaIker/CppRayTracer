@@ -12,6 +12,7 @@
 #include "stb_image_write.h"
 #include "toml++/toml.hpp"
 
+#include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
 
 class MainLayer : public Walnut::Layer {
@@ -68,6 +69,7 @@ class MainLayer : public Walnut::Layer {
         ImGui::SliderFloat("Render Scale", &m_Renderer.GetSettings().RenderScale, 0.1f, 1.0f);
         ImGui::SliderInt("Max Bounces", &m_Renderer.GetSettings().MaxBounces, 1, 10);
         ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().Accumulate);
+        ImGui::Checkbox("Jitter", &m_Renderer.GetSettings().Jitter);
         if (ImGui::Button("Reset")) {
             m_Renderer.ResetFrameIndex();
         }
@@ -88,17 +90,7 @@ class MainLayer : public Walnut::Layer {
         ImGui::Text("Save Image");
         ImGui::InputText("Filename", m_SaveFilename, 256);
         if (ImGui::Button("Save Image")) {
-            auto image = m_Renderer.GetImageData();
-            if (image) {
-                uint32_t *flippedImage = new uint32_t[m_ViewportWidth * m_ViewportHeight];
-                for (uint32_t y = 0; y < m_ViewportHeight; y++) {
-                    memcpy(&flippedImage[y * m_ViewportWidth],
-                           &image[(m_ViewportHeight - y - 1) * m_ViewportWidth],
-                           m_ViewportWidth * 4);
-                }
-                stbi_write_png(m_SaveFilename, m_ViewportWidth, m_ViewportHeight, 4, flippedImage,
-                               m_ViewportWidth * 4);
-            }
+            SaveImage();
         }
 
         ImGui::End();
@@ -135,6 +127,25 @@ class MainLayer : public Walnut::Layer {
     }
 
   private:
+    void SaveImage() {
+        auto image = m_Renderer.GetImageData();
+        if (image) {
+            uint32_t *flippedImage = new uint32_t[m_ViewportWidth * m_ViewportHeight];
+
+            for (uint32_t y = 0; y < m_ViewportHeight; y++) {
+                memcpy(&flippedImage[y * m_ViewportWidth],
+                       &image[(m_ViewportHeight - y - 1) * m_ViewportWidth], m_ViewportWidth * 4);
+            }
+
+            std::filesystem::create_directory("snapshots");
+
+            const std::string filename = "snapshots/" + std::string(m_SaveFilename) + ".png";
+            stbi_write_png(filename.c_str(), m_ViewportWidth, m_ViewportHeight, 4, flippedImage,
+                           m_ViewportWidth * 4);
+        }
+    }
+
+  private:
     Renderer m_Renderer;
     Camera m_Camera;
     Scene m_Scene;
@@ -144,7 +155,7 @@ class MainLayer : public Walnut::Layer {
 
     float m_LastRenderTime = 0.0f;
 
-    char m_SaveFilename[256] = "output.png";
+    char m_SaveFilename[256] = "output";
 
     // std::shared_ptr<toml::table> m_Scene;
 };

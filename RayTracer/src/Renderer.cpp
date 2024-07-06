@@ -82,7 +82,10 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
 
 glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
     Ray ray;
-    ray.Origin = m_ActiveCamera->GetPosition() + Walnut::Random::Vec3(-0.003f, 0.003f);
+    ray.Origin = m_ActiveCamera->GetPosition();
+    if (m_Settings.Jitter) {
+        ray.Origin += Walnut::Random::Vec3(-0.003f, 0.003f);
+    }
     ray.Direction = m_ActiveCamera->GetRayDirections()[y * m_FinalImage->GetWidth() + x];
 
     glm::vec3 colour = glm::vec3(0.0f);

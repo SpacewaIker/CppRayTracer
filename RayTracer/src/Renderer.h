@@ -15,6 +15,7 @@ class Renderer {
         bool Accumulate = true;
         int MaxBounces = 5;
         float RenderScale = 0.5f;
+        bool Jitter = true;
     };
 
   public:
