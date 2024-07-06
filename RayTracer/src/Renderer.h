@@ -55,6 +55,8 @@ class Renderer {
 
     uint32_t m_FrameIndex = 1;
 
+    std::vector<uint32_t> m_ImageVerticalterator;
+
     std::shared_ptr<toml::table> m_Scene;
 
     const Scene *m_ActiveScene = nullptr;

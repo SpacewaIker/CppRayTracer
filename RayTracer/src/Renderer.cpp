@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <execution>
 
 namespace Utils {
 static uint32_t ConvertToRGBA(const glm::vec4 &color) {
@@ -37,6 +38,11 @@ void Renderer::OnResize(uint32_t width, uint32_t height) {
     m_AccumulationData = new glm::vec4[width * height];
 
     ResetFrameIndex();
+
+    m_ImageVerticalterator.resize(height);
+    for (uint32_t i = 0; i < height; i++) {
+        m_ImageVerticalterator[i] = i;
+    }
 }
 
 void Renderer::Render(const Scene &scene, const Camera &camera) {
@@ -48,18 +54,22 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
                m_FinalImage->GetWidth() * m_FinalImage->GetHeight() * sizeof(glm::vec4));
     }
 
-    for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++) {
-        for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++) {
-            glm::vec4 colour = PerPixel(x, y);
+    // clang-format off
+    std::for_each(std::execution::par, m_ImageVerticalterator.begin(), m_ImageVerticalterator.end(), [this](uint32_t y) {
+          for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++) {
+              glm::vec4 colour = PerPixel(x, y);
 
-            m_AccumulationData[y * m_FinalImage->GetWidth() + x] += colour;
+              m_AccumulationData[y * m_FinalImage->GetWidth() + x] += colour;
 
-            glm::vec4 accumulatedColour =
-                m_AccumulationData[y * m_FinalImage->GetWidth() + x] / (float)m_FrameIndex;
+              glm::vec4 accumulatedColour =
+                  m_AccumulationData[y * m_FinalImage->GetWidth() + x] /
+                  (float)m_FrameIndex;
 
-            m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(accumulatedColour);
-        }
-    }
+              m_ImageData[y * m_FinalImage->GetWidth() + x] =
+                  Utils::ConvertToRGBA(accumulatedColour);
+          }
+    });
+    // clang-format on
 
     m_FinalImage->SetData(m_ImageData);
 
