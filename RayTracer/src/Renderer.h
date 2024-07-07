@@ -24,8 +24,6 @@ class Renderer {
     void Render(const Scene &scene, const Camera &camera);
     void OnResize(uint32_t width, uint32_t height);
 
-    void SetScene(std::shared_ptr<toml::table> scene) { m_Scene = scene; }
-
     std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
 
     void ResetFrameIndex() { m_FrameIndex = 1; }
@@ -57,8 +55,6 @@ class Renderer {
     uint32_t m_FrameIndex = 1;
 
     std::vector<uint32_t> m_ImageVerticalterator;
-
-    std::shared_ptr<toml::table> m_Scene;
 
     const Scene *m_ActiveScene = nullptr;
     const Camera *m_ActiveCamera = nullptr;

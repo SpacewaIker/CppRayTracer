@@ -19,35 +19,7 @@
 
 class MainLayer : public Walnut::Layer {
   public:
-    MainLayer() : m_Camera(45.0f, 0.1f, 100.0f) {
-        m_Scene.Materials.push_back(Material{{1.0f, 0.3f, 0.3f}, 0.8f, 0.0f}); // red
-        m_Scene.Materials.push_back(Material{{0.3f, 1.0f, 0.3f}, 0.1f, 0.0f}); // green
-        m_Scene.Materials.push_back(Material{{0.5f, 0.5f, 0.5f}, 0.5f, 0.0f}); // dark grey
-        m_Scene.Materials.push_back(Material{{0.7f, 0.7f, 0.7f}, 0.3f, 0.0f}); // light grey
-
-        m_Scene.Geometry.push_back(new Sphere({1.0f, 0.0f, -1.0f}, 0.5f, 0));
-        m_Scene.Geometry.push_back(new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, 2, 3));
-
-        std::unique_ptr<Geometry> aabb =
-            std::make_unique<AABB>(glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0.5f, 0.5f, 0.5f), 1);
-        m_Scene.Geometry.push_back(new Transform({0.0f, 0.0f, 0.0f}, {0.0f, 45.0f, 0.0f},
-                                                 {1.0f, 1.0f, 1.0f}, std::move(aabb)));
-
-        {
-            Light light;
-            light.Type = LightType::Directional;
-            light.Direction = glm::normalize(glm::vec3{-0.7f, -1.0f, 0.4f});
-            light.Intensity = 0.7;
-            m_Scene.Lights.push_back(light);
-        }
-        {
-            Light light;
-            light.Type = LightType::Point;
-            light.Position = glm::normalize(glm::vec3{1.0f, 1.0f, 1.0f});
-            light.Intensity = 0.7;
-            m_Scene.Lights.push_back(light);
-        }
-    }
+    MainLayer() : m_Camera(45.0f, 0.1f, 100.0f) { m_Scene = SceneLoader::LoadScene("scene.toml"); }
 
     virtual void OnUpdate(float deltaTime) override {
         if (m_Camera.OnUpdate(deltaTime)) {
@@ -56,17 +28,6 @@ class MainLayer : public Walnut::Layer {
     }
 
     virtual void OnUIRender() override {
-        // load scene
-        // try {
-        //     toml::table table = toml::parse_file("scene.toml");
-        //     m_Scene = std::make_shared<toml::table>(table);
-        // } catch (const toml::parse_error &err) {
-        //     std::cerr << "Failed to parse scene.toml: " << err << std::endl;
-        //     exit;
-        // }
-
-        // m_Renderer.SetScene(m_Scene);
-
         // settings window
         ImGui::Begin("Settings");
         ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
@@ -162,8 +123,6 @@ class MainLayer : public Walnut::Layer {
     float m_LastRenderTime = 0.0f;
 
     char m_SaveFilename[256] = "output";
-
-    // std::shared_ptr<toml::table> m_Scene;
 };
 
 Walnut::Application *Walnut::CreateApplication(int argc, char **argv) {
