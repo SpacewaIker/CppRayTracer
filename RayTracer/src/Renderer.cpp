@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-#include "Walnut/Random.h"
+#include "RTRandom.h"
 #include "glm/geometric.hpp"
 
 #include <cstdint>
@@ -81,10 +81,16 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
 }
 
 glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
+    uint32_t seed = x + y * m_FinalImage->GetWidth();
+    seed *= m_FrameIndex;
+    auto now = std::chrono::system_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    seed ^= ms;
+
     Ray ray;
     ray.Origin = m_ActiveCamera->GetPosition();
     if (m_Settings.Jitter) {
-        ray.Origin += Walnut::Random::Vec3(-0.003f, 0.003f);
+        ray.Origin += RTRandom::Vec3(seed, -0.003f, 0.003f);
     }
     ray.Direction = m_ActiveCamera->GetRayDirections()[y * m_FinalImage->GetWidth() + x];
 
@@ -92,6 +98,8 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
     float multiplier = 0.9f;
 
     for (int _i = 0; _i < m_Settings.MaxBounces; _i++) {
+        seed++;
+
         Renderer::HitPayload hit = TraceRay(ray);
 
         // no hit
@@ -114,7 +122,7 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
 
         ray.Origin = hit.WorldPosition + hit.WorldNormal * 0.0001f;
         glm::vec3 roughNormal =
-            hit.WorldNormal + material.Roughness * Walnut::Random::Vec3(-0.5, 0.5);
+            hit.WorldNormal + material.Roughness * RTRandom::Vec3(seed, -0.5, 0.5);
         ray.Direction = glm::reflect(ray.Direction, roughNormal);
     }
 
