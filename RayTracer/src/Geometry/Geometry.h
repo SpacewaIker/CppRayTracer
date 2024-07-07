@@ -12,6 +12,7 @@ struct Intersection {
 class Geometry {
   public:
     Geometry(int materialIndex) : m_MaterialIndex(materialIndex) {}
+    virtual ~Geometry() = default;
 
     virtual float Intersect(const Ray &ray) const = 0;
     virtual glm::vec3 GetNormal(const glm::vec3 &point) const = 0;

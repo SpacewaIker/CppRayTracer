@@ -2,6 +2,7 @@
 #include "Geometry/AABB.h"
 #include "Geometry/Plane.h"
 #include "Geometry/Sphere.h"
+#include "Geometry/Transform.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include "Walnut/Application.h"
@@ -14,6 +15,7 @@
 
 #include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
+#include <memory>
 
 class MainLayer : public Walnut::Layer {
   public:
@@ -24,8 +26,12 @@ class MainLayer : public Walnut::Layer {
         m_Scene.Materials.push_back(Material{{0.7f, 0.7f, 0.7f}, 0.3f, 0.0f}); // light grey
 
         m_Scene.Geometry.push_back(new Sphere({1.0f, 0.0f, -1.0f}, 0.5f, 0));
-        m_Scene.Geometry.push_back(new AABB({-0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}, 1));
         m_Scene.Geometry.push_back(new Plane({0.0f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, 2, 3));
+
+        std::unique_ptr<Geometry> aabb =
+            std::make_unique<AABB>(glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0.5f, 0.5f, 0.5f), 1);
+        m_Scene.Geometry.push_back(new Transform({0.0f, 0.0f, 0.0f}, {0.0f, 45.0f, 0.0f},
+                                                 {1.0f, 1.0f, 1.0f}, std::move(aabb)));
 
         {
             Light light;
