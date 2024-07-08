@@ -2,12 +2,18 @@
 
 #include "Geometry/AABB.h"
 #include "Geometry/Plane.h"
+#include "Geometry/SDF/SDFAABB.h"
+#include "Geometry/SDF/SDFPlane.h"
+#include "Geometry/SDF/SDFSphere.h"
 #include "Geometry/Sphere.h"
 #include "Geometry/Transform.h"
 #include "Light.h"
 #include "toml++/toml.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
+#include <string>
 
 glm::vec3 ParseVec3(const toml::array *array) {
     glm::vec3 vec{0.0f};
@@ -36,7 +42,8 @@ Material ParseMaterial(const toml::table *table) {
 }
 
 std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
-    auto type = *table->get_as<std::string>("type");
+    std::string type = table->get_as<std::string>("type")->value_or("");
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
 
     if (type == "sphere") {
         auto position = table->get_as<toml::array>("position");
@@ -49,6 +56,17 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid sphere geometry. skipping..." << std::endl;
+    } else if (type == "sdfsphere") {
+        auto position = table->get_as<toml::array>("position");
+        auto radius = table->get_as<toml::value<double>>("radius");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+
+        if (position && radius && material) {
+            return std::make_unique<SDFSphere>(ParseVec3(position), (float)radius->get(),
+                                               (int)material->get());
+        }
+
+        std::cerr << "Invalid sdfsphere geometry. skipping..." << std::endl;
     } else if (type == "plane") {
         auto position = table->get_as<toml::array>("position");
         auto normal = table->get_as<toml::array>("normal");
@@ -61,6 +79,18 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid plane geometry. skipping..." << std::endl;
+    } else if (type == "sdfplane") {
+        auto position = table->get_as<toml::array>("position");
+        auto normal = table->get_as<toml::array>("normal");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+        auto material2 = table->get_as<toml::value<int64_t>>("material2");
+
+        if (position && normal && material && material2) {
+            return std::make_unique<SDFPlane>(ParseVec3(position), ParseVec3(normal),
+                                              (int)material->get(), (int)material2->get());
+        }
+
+        std::cerr << "Invalid sdfplane geometry. skipping..." << std::endl;
     } else if (type == "aabb") {
         auto min = table->get_as<toml::array>("min");
         auto max = table->get_as<toml::array>("max");
@@ -71,6 +101,22 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid AABB geometry. skipping..." << std::endl;
+    } else if (type == "sdfaabb") {
+        auto min = table->get_as<toml::array>("min");
+        auto max = table->get_as<toml::array>("max");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+        auto rounded = table->get_as<toml::value<double>>("rounded");
+        float roundedValid = 0.0f;
+        if (rounded) {
+            roundedValid = (float)rounded->get();
+        }
+
+        if (min && max && material) {
+            return std::make_unique<SDFAABB>(ParseVec3(min), ParseVec3(max), roundedValid,
+                                             (int)material->get());
+        }
+
+        std::cerr << "Invalid sdfAABB geometry. skipping..." << std::endl;
     } else if (type == "transform") {
         auto translation = table->get_as<toml::array>("translation");
         glm::vec3 translationValid{0.0f};

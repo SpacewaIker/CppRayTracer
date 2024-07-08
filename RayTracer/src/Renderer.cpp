@@ -56,18 +56,18 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
 
     // clang-format off
     std::for_each(std::execution::par, m_ImageVerticalterator.begin(), m_ImageVerticalterator.end(), [this](uint32_t y) {
-          for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++) {
-              glm::vec4 colour = PerPixel(x, y);
+        for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++) {
+            glm::vec4 colour = PerPixel(x, y);
 
-              m_AccumulationData[y * m_FinalImage->GetWidth() + x] += colour;
+            m_AccumulationData[y * m_FinalImage->GetWidth() + x] += colour;
 
-              glm::vec4 accumulatedColour =
-                  m_AccumulationData[y * m_FinalImage->GetWidth() + x] /
-                  (float)m_FrameIndex;
+            glm::vec4 accumulatedColour =
+              m_AccumulationData[y * m_FinalImage->GetWidth() + x] /
+              (float)m_FrameIndex;
 
-              m_ImageData[y * m_FinalImage->GetWidth() + x] =
-                  Utils::ConvertToRGBA(accumulatedColour);
-          }
+            m_ImageData[y * m_FinalImage->GetWidth() + x] =
+              Utils::ConvertToRGBA(accumulatedColour);
+        }
     });
     // clang-format on
 

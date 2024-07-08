@@ -1,8 +1,6 @@
 #pragma once
 
-#include "../Material.h"
 #include "../Ray.h"
-#include "glm/glm.hpp"
 
 struct Intersection {
     float T = 0.0f;

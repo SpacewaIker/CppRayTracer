@@ -6,7 +6,7 @@ class Plane : public Geometry {
   public:
     Plane(const glm::vec3 &position, const glm::vec3 &normal, int materialIndex = 0,
           int materialIndex2 = -1)
-        : m_Position(position), m_Normal(normal), Geometry(materialIndex),
+        : m_Position(position), m_Normal(glm::normalize(normal)), Geometry(materialIndex),
           m_MaterialIndex2(materialIndex2) {
         // set axes
         if (normal == glm::vec3(0.0f, 1.0f, 0.0f) || normal == glm::vec3(0.0f, -1.0f, 0.0f) ||

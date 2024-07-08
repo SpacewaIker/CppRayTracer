@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Geometry.h"
+#include "../Geometry.h"
 
 class SDFGeometry : public Geometry {
   public:
@@ -10,8 +10,8 @@ class SDFGeometry : public Geometry {
     glm::vec3 GetNormal(const glm::vec3 &point) const override;
 
   private:
-    float Distance(const glm::vec3 &point) const;
+    virtual float Distance(const glm::vec3 &point) const = 0;
 
-  private:
-    bool m_IsConvex = true;
+  protected:
+    bool m_IsConvex = false;
 };

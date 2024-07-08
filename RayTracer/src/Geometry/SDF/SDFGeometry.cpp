@@ -1,7 +1,7 @@
 
 #include "SDFGeometry.h"
 
-#define SDF_MAX_ITERATIONS 20
+#define SDF_MAX_ITERATIONS 500
 #define SDF_EPSILON 0.0001f
 #define SDF_MAX_DEPTH 1000.0f
 
@@ -39,11 +39,4 @@ glm::vec3 SDFGeometry::GetNormal(const glm::vec3 &point) const {
                                      Distance(point - glm::vec3(0.0f, 0.0f, epsilon)));
 
     return glm::normalize(normal);
-}
-
-float SDFGeometry::Distance(const glm::vec3 &point) const {
-    glm::vec3 center{0.0f};
-    float radius = 1.0f;
-
-    return glm::length(point - center) - radius;
 }
