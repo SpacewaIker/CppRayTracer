@@ -158,22 +158,28 @@ Scene SceneLoader::LoadScene(const std::string &path) {
     Scene scene;
 
     // materials
-    for (const auto &material : *table["materials"].as_array()) {
-        scene.Materials.push_back(ParseMaterial(material.as_table()));
+    if (table["materials"].is_array()) {
+        for (const auto &material : *table["materials"].as_array()) {
+            scene.Materials.push_back(ParseMaterial(material.as_table()));
+        }
     }
 
     // geometry
-    for (const auto &geometry : *table["geometry"].as_array()) {
-        auto g = ParseGeometry(geometry.as_table());
-        if (g) {
-            scene.Geometry.push_back(g.release());
+    if (table["geometry"].is_array()) {
+        for (const auto &geometry : *table["geometry"].as_array()) {
+            auto g = ParseGeometry(geometry.as_table());
+            if (g) {
+                scene.Geometry.push_back(g.release());
+            }
         }
     }
 
     // lights
-    for (const auto &light : *table["lights"].as_array()) {
-        if (auto l = ParseLight(light.as_table())) {
-            scene.Lights.push_back(*l);
+    if (table["lights"].is_array()) {
+        for (const auto &light : *table["lights"].as_array()) {
+            if (auto l = ParseLight(light.as_table())) {
+                scene.Lights.push_back(*l);
+            }
         }
     }
 
