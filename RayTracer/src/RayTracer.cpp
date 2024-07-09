@@ -1,11 +1,4 @@
 #include "Camera.h"
-#include "Geometry/AABB.h"
-#include "Geometry/Plane.h"
-#include "Geometry/SDF/SDFAABB.h"
-#include "Geometry/SDF/SDFPlane.h"
-#include "Geometry/SDF/SDFSphere.h"
-#include "Geometry/Sphere.h"
-#include "Geometry/Transform.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include "Walnut/Application.h"
@@ -14,7 +7,6 @@
 #include "Walnut/Timer.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-#include "toml++/toml.hpp"
 
 #include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
