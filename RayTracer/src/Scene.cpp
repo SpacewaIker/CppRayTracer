@@ -3,6 +3,7 @@
 #include "Geometry/AABB.h"
 #include "Geometry/Plane.h"
 #include "Geometry/SDF/SDFAABB.h"
+#include "Geometry/SDF/SDFHollowSphere.h"
 #include "Geometry/SDF/SDFPlane.h"
 #include "Geometry/SDF/SDFSphere.h"
 #include "Geometry/Sphere.h"
@@ -147,6 +148,18 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid transform geometry. skipping..." << std::endl;
+    } else if (type == "sdfhollowsphere") {
+        auto position = table->get_as<toml::array>("position");
+        auto radius = table->get_as<toml::value<double>>("radius");
+        auto thickness = table->get_as<toml::value<double>>("thickness");
+        auto height = table->get_as<toml::value<double>>("height");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+
+        if (position && radius && thickness && height && material) {
+            return std::make_unique<SDFHollowSphere>(ParseVec3(position), (float)radius->get(),
+                                                     (float)thickness->get(), (float)height->get(),
+                                                     (int)material->get());
+        }
     } else {
         std::cerr << "Unknown geometry type: " << type << ". skipping..." << std::endl;
     }
