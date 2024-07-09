@@ -25,6 +25,12 @@ static glm::vec3 Vec3(uint32_t &seed, float min, float max) {
     return glm::vec3(Float(seed, min, max), Float(seed, min, max), Float(seed, min, max));
 }
 
-static glm::vec3 InUnitSphere(uint32_t &seed) { return glm::normalize(Vec3(seed, -1.0f, 1.0f)); }
+static glm::vec3 InUnitSphere(uint32_t &seed) {
+    glm::vec3 p;
+    do {
+        p = Vec3(seed, -1.0f, 1.0f);
+    } while (glm::dot(p, p) >= 1.0f);
+    return glm::normalize(p);
+}
 
 } // namespace RTRandom
