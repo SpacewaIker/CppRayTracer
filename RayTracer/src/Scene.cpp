@@ -59,6 +59,12 @@ Material ParseMaterial(const toml::table *table) {
     if (auto metallic = table->get_as<toml::value<double>>("metallic")) {
         mat.Metallic = (float)metallic->get();
     }
+    if (auto emissionColour = table->get_as<toml::array>("emission_colour")) {
+        mat.EmissionColour = ParseVec3(emissionColour);
+    }
+    if (auto emissionPower = table->get_as<toml::value<double>>("emission_power")) {
+        mat.EmissionPower = (float)emissionPower->get();
+    }
 
     return mat;
 }
@@ -325,6 +331,10 @@ Scene SceneLoader::LoadScene(const std::string &path) {
     }
 
     Scene scene;
+
+    if (auto skyColour = table.get_as<toml::array>("sky_colour")) {
+        scene.SkyColour = ParseVec3(skyColour);
+    }
 
     // materials
     if (table["materials"].is_array()) {

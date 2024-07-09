@@ -94,8 +94,8 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
     }
     ray.Direction = m_ActiveCamera->GetRayDirections()[y * m_FinalImage->GetWidth() + x];
 
-    glm::vec3 colour = glm::vec3(0.0f);
-    float multiplier = 0.9f;
+    glm::vec3 light = glm::vec3(0.0f);
+    glm::vec3 contribution{1.0f};
 
     for (int _i = 0; _i < m_Settings.MaxBounces; _i++) {
         seed++;
@@ -104,29 +104,28 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
 
         // no hit
         if (hit.Intersection.GeometryIndex == -1) {
-            colour += m_ActiveScene->SkyColour * multiplier;
+            light += m_ActiveScene->SkyColour * contribution;
             break;
         }
 
-        for (const auto &light : m_ActiveScene->Lights) {
-            glm::vec3 lightColour = CalculateLighting(hit, light);
-            colour += lightColour * multiplier;
+        for (const auto &lightSource : m_ActiveScene->Lights) {
+            glm::vec3 lightColour = CalculateLighting(hit, lightSource);
+            light += lightColour * contribution;
         }
-
-        multiplier *= 0.4;
 
         int materialIndex =
             m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(
                 hit.WorldPosition);
         Material material = m_ActiveScene->Materials[materialIndex];
 
+        light += material.GetEmission() * material.Albedo;
+        contribution *= material.Albedo;
+
         ray.Origin = hit.WorldPosition + hit.WorldNormal * 0.0001f;
-        glm::vec3 roughNormal =
-            hit.WorldNormal + material.Roughness * RTRandom::Vec3(seed, -0.5, 0.5);
-        ray.Direction = glm::reflect(ray.Direction, roughNormal);
+        ray.Direction = glm::normalize(RTRandom::InUnitSphere(seed) + hit.WorldNormal);
     }
 
-    return glm::vec4(colour, 1.0f);
+    return glm::vec4(light, 1.0f);
 }
 
 Renderer::HitPayload Renderer::TraceRay(const Ray &ray) {
