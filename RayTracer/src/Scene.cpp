@@ -3,6 +3,7 @@
 #include "Geometry/AABB.h"
 #include "Geometry/Plane.h"
 #include "Geometry/SDF/SDFAABB.h"
+#include "Geometry/SDF/SDFConstructive.h"
 #include "Geometry/SDF/SDFHollowSphere.h"
 #include "Geometry/SDF/SDFPlane.h"
 #include "Geometry/SDF/SDFSphere.h"
@@ -16,6 +17,14 @@
 #include <iostream>
 #include <string>
 
+// prototypes
+glm::vec3 ParseVec3(const toml::array *array);
+Material ParseMaterial(const toml::table *table);
+std::unique_ptr<Geometry> ParseGeometry(const toml::table *table);
+std::unique_ptr<SDFGeometry> ParseSDFGeometry(const toml::table *table);
+std::optional<Light> ParseLight(const toml::table *table);
+
+// implementations
 glm::vec3 ParseVec3(const toml::array *array) {
     glm::vec3 vec{0.0f};
 
@@ -57,17 +66,6 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid sphere geometry. skipping..." << std::endl;
-    } else if (type == "sdfsphere") {
-        auto position = table->get_as<toml::array>("position");
-        auto radius = table->get_as<toml::value<double>>("radius");
-        auto material = table->get_as<toml::value<int64_t>>("material");
-
-        if (position && radius && material) {
-            return std::make_unique<SDFSphere>(ParseVec3(position), (float)radius->get(),
-                                               (int)material->get());
-        }
-
-        std::cerr << "Invalid sdfsphere geometry. skipping..." << std::endl;
     } else if (type == "plane") {
         auto position = table->get_as<toml::array>("position");
         auto normal = table->get_as<toml::array>("normal");
@@ -80,18 +78,6 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid plane geometry. skipping..." << std::endl;
-    } else if (type == "sdfplane") {
-        auto position = table->get_as<toml::array>("position");
-        auto normal = table->get_as<toml::array>("normal");
-        auto material = table->get_as<toml::value<int64_t>>("material");
-        auto material2 = table->get_as<toml::value<int64_t>>("material2");
-
-        if (position && normal && material && material2) {
-            return std::make_unique<SDFPlane>(ParseVec3(position), ParseVec3(normal),
-                                              (int)material->get(), (int)material2->get());
-        }
-
-        std::cerr << "Invalid sdfplane geometry. skipping..." << std::endl;
     } else if (type == "aabb") {
         auto min = table->get_as<toml::array>("min");
         auto max = table->get_as<toml::array>("max");
@@ -102,22 +88,6 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid AABB geometry. skipping..." << std::endl;
-    } else if (type == "sdfaabb") {
-        auto min = table->get_as<toml::array>("min");
-        auto max = table->get_as<toml::array>("max");
-        auto material = table->get_as<toml::value<int64_t>>("material");
-        auto rounded = table->get_as<toml::value<double>>("rounded");
-        float roundedValid = 0.0f;
-        if (rounded) {
-            roundedValid = (float)rounded->get();
-        }
-
-        if (min && max && material) {
-            return std::make_unique<SDFAABB>(ParseVec3(min), ParseVec3(max), roundedValid,
-                                             (int)material->get());
-        }
-
-        std::cerr << "Invalid sdfAABB geometry. skipping..." << std::endl;
     } else if (type == "transform") {
         auto translation = table->get_as<toml::array>("translation");
         glm::vec3 translationValid{0.0f};
@@ -148,6 +118,60 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         }
 
         std::cerr << "Invalid transform geometry. skipping..." << std::endl;
+    } else if (type == "sdfsphere" || type == "sdfhollowsphere" || type == "sdfplane" ||
+               type == "sdfconstructive" || type == "sdfaabb") {
+        return ParseSDFGeometry(table);
+    } else {
+        std::cerr << "Unknown geometry type: " << type << ". skipping..." << std::endl;
+    }
+
+    return nullptr;
+}
+
+std::unique_ptr<SDFGeometry> ParseSDFGeometry(const toml::table *table) {
+    std::string type = table->get_as<std::string>("type")->value_or("");
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+
+    if (type == "sdfsphere") {
+        auto position = table->get_as<toml::array>("position");
+        auto radius = table->get_as<toml::value<double>>("radius");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+        int materialValid = material ? (int)material->get() : 0;
+
+        if (position && radius) {
+            return std::make_unique<SDFSphere>(ParseVec3(position), (float)radius->get(),
+                                               materialValid);
+        }
+
+        std::cerr << "Invalid sdfsphere geometry. skipping..." << std::endl;
+    } else if (type == "sdfplane") {
+        auto position = table->get_as<toml::array>("position");
+        auto normal = table->get_as<toml::array>("normal");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+        auto material2 = table->get_as<toml::value<int64_t>>("material2");
+
+        if (position && normal && material && material2) {
+            return std::make_unique<SDFPlane>(ParseVec3(position), ParseVec3(normal),
+                                              (int)material->get(), (int)material2->get());
+        }
+
+        std::cerr << "Invalid sdfplane geometry. skipping..." << std::endl;
+    } else if (type == "sdfaabb") {
+        auto min = table->get_as<toml::array>("min");
+        auto max = table->get_as<toml::array>("max");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+        auto rounded = table->get_as<toml::value<double>>("rounded");
+        float roundedValid = 0.0f;
+        if (rounded) {
+            roundedValid = (float)rounded->get();
+        }
+
+        if (min && max && material) {
+            return std::make_unique<SDFAABB>(ParseVec3(min), ParseVec3(max), roundedValid,
+                                             (int)material->get());
+        }
+
+        std::cerr << "Invalid sdfAABB geometry. skipping..." << std::endl;
     } else if (type == "sdfhollowsphere") {
         auto position = table->get_as<toml::array>("position");
         auto radius = table->get_as<toml::value<double>>("radius");
@@ -160,8 +184,48 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
                                                      (float)thickness->get(), (float)height->get(),
                                                      (int)material->get());
         }
+    } else if (type == "sdfconstructive") {
+        std::string operation = table->get_as<std::string>("operation")->value_or("");
+        auto material = table->get_as<toml::value<int64_t>>("material");
+        auto smoothing = table->get_as<toml::value<double>>("smoothing");
+
+        SDFConstructive::Operation op;
+        if (operation == "union") {
+            op = smoothing ? SDFConstructive::Operation::SmoothUnion
+                           : SDFConstructive::Operation::Union;
+        } else if (operation == "difference") {
+            op = smoothing ? SDFConstructive::Operation::SmoothDifference
+                           : SDFConstructive::Operation::Difference;
+        } else if (operation == "intersection") {
+            op = smoothing ? SDFConstructive::Operation::SmoothIntersection
+                           : SDFConstructive::Operation::Intersection;
+        } else {
+            std::cerr << "Invalid operation for constructive SDF: " << operation << ". skipping..."
+                      << std::endl;
+            return nullptr;
+        }
+
+        auto left = table->get_as<toml::table>("left");
+        auto right = table->get_as<toml::table>("right");
+
+        float smoothingValid = 1.0f;
+        if (smoothing) {
+            smoothingValid = (float)smoothing->get();
+        }
+        if (left && right && material) {
+            auto leftParsed = ParseSDFGeometry(left);
+            auto rightParsed = ParseSDFGeometry(right);
+
+            if (leftParsed && rightParsed) {
+                return std::make_unique<SDFConstructive>(op, std::move(leftParsed),
+                                                         std::move(rightParsed),
+                                                         (int)material->get(), smoothingValid);
+            }
+        }
+
+        std::cerr << "Invalid constructive SDF geometry. skipping..." << std::endl;
     } else {
-        std::cerr << "Unknown geometry type: " << type << ". skipping..." << std::endl;
+        std::cerr << "Unknown SDF geometry type: " << type << ". skipping..." << std::endl;
     }
 
     return nullptr;
