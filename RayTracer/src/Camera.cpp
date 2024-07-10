@@ -7,13 +7,6 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-Camera::Camera(float verticalFOV, float nearPlane, float farPlane)
-    : m_VerticalFOV(verticalFOV), m_NearPlane(nearPlane), m_FarPlane(farPlane) {
-
-    m_Position = glm::vec3(0.0f, 0.0f, 3.0f);
-    m_ForwardDirection = glm::vec3(0.0f, 0.0f, -1.0f);
-}
-
 bool Camera::OnUpdate(float deltaTime) {
     glm::vec2 mousePosition = Walnut::Input::GetMousePosition();
     glm::vec2 delta = (mousePosition - m_LastMousePosition) * m_MouseSensitivity;

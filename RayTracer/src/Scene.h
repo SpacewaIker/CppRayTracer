@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Camera.h"
 #include "Geometry/Geometry.h"
 #include "Light.h"
 #include "Material.h"
@@ -17,4 +18,5 @@ struct Scene {
 
 namespace SceneLoader {
 Scene LoadScene(const std::string &path);
-}
+Camera LoadCameraSettings(const std::string &path);
+} // namespace SceneLoader

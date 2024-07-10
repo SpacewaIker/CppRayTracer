@@ -322,7 +322,7 @@ std::unique_ptr<SDFConstructive> ParseSDFConstructive(const toml::table *table) 
 Scene SceneLoader::LoadScene(const std::string &path) {
     toml::table table;
 
-    // load scene
+    // load scene file
     try {
         table = toml::parse_file("scene.toml");
     } catch (const toml::parse_error &err) {
@@ -366,4 +366,40 @@ Scene SceneLoader::LoadScene(const std::string &path) {
     }
 
     return scene;
+}
+
+Camera SceneLoader::LoadCameraSettings(const std::string &path) {
+    toml::table table;
+
+    // load scene file
+    try {
+        table = toml::parse_file("scene.toml");
+    } catch (const toml::parse_error &err) {
+        std::cerr << "Failed to parse scene.toml: " << err << std::endl;
+        exit(1);
+    }
+
+    auto verticalFOV = table.get_as<toml::value<double>>("vertical_fov");
+    float verticalFOVValid = verticalFOV ? (float)verticalFOV->get() : 45.0f;
+    auto sensorHeight = table.get_as<toml::value<double>>("sensor_height");
+    float sensorHeightValid = sensorHeight ? (float)sensorHeight->get() : 24.0f;
+    auto focalLength = table.get_as<toml::value<double>>("focal_length");
+    float focalLengthValid = focalLength ? (float)focalLength->get() : 28.0f;
+    auto nearPlane = table.get_as<toml::value<double>>("near_plane");
+    float nearPlaneValid = nearPlane ? (float)nearPlane->get() : 0.1f;
+    auto farPlane = table.get_as<toml::value<double>>("far_plane");
+    float farPlaneValid = farPlane ? (float)farPlane->get() : 100.0f;
+    auto position = table.get_as<toml::array>("camera_position");
+    auto positionValid = position ? ParseVec3(position) : glm::vec3{0.0f};
+    auto forwardDirection = table.get_as<toml::array>("camera_forward_direction");
+    auto forwardDirectionValid =
+        forwardDirection ? ParseVec3(forwardDirection) : glm::vec3{0.0f, 0.0f, 1.0f};
+
+    if (sensorHeight || focalLength) {
+        return Camera(sensorHeightValid, focalLengthValid, nearPlaneValid, farPlaneValid,
+                      positionValid, forwardDirectionValid);
+    } else {
+        return Camera(verticalFOVValid, nearPlaneValid, farPlaneValid, positionValid,
+                      forwardDirectionValid);
+    }
 }

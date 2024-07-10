@@ -14,7 +14,9 @@
 
 class MainLayer : public Walnut::Layer {
   public:
-    MainLayer() : m_Camera(45.0f, 0.1f, 100.0f) { m_Scene = SceneLoader::LoadScene("scene.toml"); }
+    MainLayer()
+        : m_Camera(SceneLoader::LoadCameraSettings("camera.toml")),
+          m_Scene(SceneLoader::LoadScene("scene.toml")) {}
 
     virtual void OnUpdate(float deltaTime) override {
         if (m_Camera.OnUpdate(deltaTime)) {
