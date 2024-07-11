@@ -52,8 +52,7 @@ bool Camera::OnUpdate(float deltaTime) {
         float pitchDelta = delta.y * GetRotationSpeed();
         float yawDelta = delta.x * GetRotationSpeed();
 
-        glm::quat q = glm::normalize(
-            glm::cross(glm::angleAxis(-pitchDelta, right), glm::angleAxis(-yawDelta, UP)));
+        glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, right), glm::angleAxis(-yawDelta, UP)));
         m_ForwardDirection = glm::rotate(q, m_ForwardDirection);
 
         moved = true;
@@ -77,20 +76,20 @@ void Camera::OnResize(uint32_t width, uint32_t height) {
     m_ViewportHeight = height;
 
     RecalculateProjectionMatrix();
+    RecalculateViewMatrix();
     RecalculateRayDirections();
 }
 
 float Camera::GetRotationSpeed() { return 0.3f; }
 
 void Camera::RecalculateProjectionMatrix() {
-    m_ProjectionMatrix = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)m_ViewportWidth,
-                                             (float)m_ViewportHeight, m_NearPlane, m_FarPlane);
+    m_ProjectionMatrix = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)m_ViewportWidth, (float)m_ViewportHeight,
+                                             m_NearPlane, m_FarPlane);
     m_InverseProjection = glm::inverse(m_ProjectionMatrix);
 }
 
 void Camera::RecalculateViewMatrix() {
-    m_ViewMatrix =
-        glm::lookAt(m_Position, m_Position + m_ForwardDirection, glm::vec3(0.0f, 1.0f, 0.0f));
+    m_ViewMatrix = glm::lookAt(m_Position, m_Position + m_ForwardDirection, glm::vec3(0.0f, 1.0f, 0.0f));
     m_InverseView = glm::inverse(m_ViewMatrix);
 }
 
@@ -99,13 +98,11 @@ void Camera::RecalculateRayDirections() {
 
     for (uint32_t y = 0; y < m_ViewportHeight; y++) {
         for (uint32_t x = 0; x < m_ViewportWidth; x++) {
-            glm::vec2 coords = {(float)x / (float)m_ViewportWidth,
-                                (float)y / (float)m_ViewportHeight};
+            glm::vec2 coords = {(float)x / (float)m_ViewportWidth, (float)y / (float)m_ViewportHeight};
             coords = coords * 2.0f - 1.0f; // map to [-1, 1]
 
             glm::vec4 target = m_InverseProjection * glm::vec4(coords, -1.0, 1.0);
-            glm::vec3 rayDir = glm::vec3(
-                m_InverseView * glm::vec4(glm::normalize(glm::vec3(target) / target.w), 0));
+            glm::vec3 rayDir = glm::vec3(m_InverseView * glm::vec4(glm::normalize(glm::vec3(target) / target.w), 0));
             m_RayDirections[y * m_ViewportWidth + x] = rayDir;
         }
     }

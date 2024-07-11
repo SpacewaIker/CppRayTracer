@@ -8,6 +8,7 @@
 #include <execution>
 
 namespace Utils {
+/// Clamp a colour to the range [0, 1] and convert it to an RGBA integer.
 static uint32_t ConvertToRGBA(const glm::vec4 &color) {
     glm::vec4 clampedColor = glm::clamp(color, 0.0f, 1.0f);
 
@@ -20,6 +21,7 @@ static uint32_t ConvertToRGBA(const glm::vec4 &color) {
 }
 } // namespace Utils
 
+/// Resize the image data buffers and reset the frame index.
 void Renderer::OnResize(uint32_t width, uint32_t height) {
     if (m_FinalImage) {
         if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height) {
@@ -37,21 +39,23 @@ void Renderer::OnResize(uint32_t width, uint32_t height) {
     delete[] m_AccumulationData;
     m_AccumulationData = new glm::vec4[width * height];
 
-    ResetFrameIndex();
+    ResetFrameIndex(); // frame index is used to average the accumulation data
 
+    // create a vertical iterator for parallel rendering
     m_ImageVerticalterator.resize(height);
     for (uint32_t i = 0; i < height; i++) {
         m_ImageVerticalterator[i] = i;
     }
 }
 
+/// Render the scene using the active camera.
 void Renderer::Render(const Scene &scene, const Camera &camera) {
     m_ActiveScene = &scene;
     m_ActiveCamera = &camera;
 
+    // reset accumulation data after resize, movement, or reset
     if (m_FrameIndex == 1) {
-        memset(m_AccumulationData, 0,
-               m_FinalImage->GetWidth() * m_FinalImage->GetHeight() * sizeof(glm::vec4));
+        memset(m_AccumulationData, 0, m_FinalImage->GetWidth() * m_FinalImage->GetHeight() * sizeof(glm::vec4));
     }
 
     // clang-format off
@@ -61,12 +65,9 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
 
             m_AccumulationData[y * m_FinalImage->GetWidth() + x] += colour;
 
-            glm::vec4 accumulatedColour =
-              m_AccumulationData[y * m_FinalImage->GetWidth() + x] /
-              (float)m_FrameIndex;
+            glm::vec4 accumulatedColour = m_AccumulationData[y * m_FinalImage->GetWidth() + x] / (float)m_FrameIndex;
 
-            m_ImageData[y * m_FinalImage->GetWidth() + x] =
-              Utils::ConvertToRGBA(accumulatedColour);
+            m_ImageData[y * m_FinalImage->GetWidth() + x] = Utils::ConvertToRGBA(accumulatedColour);
         }
     });
     // clang-format on
@@ -80,9 +81,12 @@ void Renderer::Render(const Scene &scene, const Camera &camera) {
     }
 }
 
+/// Compute the colour for a specific pixel in the image.
 glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
+    // make a "unique" seed for each pixel-frame index-bounce combination
     uint32_t seed = x + y * m_FinalImage->GetWidth();
     seed *= m_FrameIndex;
+    // add a time-based seed to introduce randomness
     auto now = std::chrono::system_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
     seed ^= ms;
@@ -94,8 +98,8 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
     }
     ray.Direction = m_ActiveCamera->GetRayDirections()[y * m_FinalImage->GetWidth() + x];
 
-    glm::vec3 light = glm::vec3(0.0f);
-    glm::vec3 contribution{1.0f};
+    glm::vec3 light = glm::vec3(0.0f); // accumulated light for this pixel, increases with each bounce
+    glm::vec3 contribution{1.0f};      // accumulated contribution for this pixel, decreases with each bounce
 
     for (int _i = 0; _i < m_Settings.MaxBounces; _i++) {
         seed++;
@@ -108,19 +112,19 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
             break;
         }
 
+        // add light from all light sources (direct, point light)
         for (const auto &lightSource : m_ActiveScene->Lights) {
             glm::vec3 lightColour = CalculateLighting(hit, lightSource);
             light += lightColour * contribution;
         }
 
-        int materialIndex =
-            m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(
-                hit.WorldPosition);
+        int materialIndex = m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(hit.WorldPosition);
         Material material = m_ActiveScene->Materials[materialIndex];
 
         light += material.GetEmission() * material.Albedo;
         contribution *= material.Albedo;
 
+        // change ray for next bounce
         ray.Origin = hit.WorldPosition + hit.WorldNormal * 0.0001f;
         ray.Direction = glm::normalize(RTRandom::InUnitSphere(seed) + hit.WorldNormal);
     }
@@ -194,12 +198,13 @@ glm::vec3 Renderer::CalculateLighting(const HitPayload &hit, const Light &light)
 
     glm::vec3 lightDir = glm::normalize(shadowRay.Direction);
     float lambert = glm::max(0.0f, glm::dot(hit.WorldNormal, lightDir));
+    glm::vec3 halfVector = glm::normalize(lightDir - glm::normalize(hit.WorldPosition - hit.WorldPosition));
+    float specular = 0.5 * glm::pow(glm::max(0.0f, glm::dot(hit.WorldNormal, halfVector)), 100.0f);
 
-    int materialIndex = m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(
-        hit.WorldPosition);
+    int materialIndex = m_ActiveScene->Geometry[hit.Intersection.GeometryIndex]->GetMaterialIndex(hit.WorldPosition);
     Material material = m_ActiveScene->Materials[materialIndex];
 
-    glm::vec3 colour = material.Albedo * light.Colour * light.Intensity * lambert;
+    glm::vec3 colour = material.Albedo * light.Colour * light.Intensity * (lambert + specular);
 
     return colour;
 }

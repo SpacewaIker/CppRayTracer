@@ -14,12 +14,10 @@
 
 class MainLayer : public Walnut::Layer {
   public:
-    MainLayer()
-        : m_Camera(SceneLoader::LoadCameraSettings("camera.toml")),
-          m_Scene(SceneLoader::LoadScene("scene.toml")) {}
+    MainLayer() : m_Camera(SceneLoader::LoadCameraSettings("camera.toml")), m_Scene(SceneLoader::LoadScene("scene.toml")) {}
 
     virtual void OnUpdate(float deltaTime) override {
-        if (m_Camera.OnUpdate(deltaTime)) {
+        if (m_Camera.OnUpdate(deltaTime)) { // if camera moved
             m_Renderer.ResetFrameIndex();
         }
     }
@@ -27,6 +25,7 @@ class MainLayer : public Walnut::Layer {
     virtual void OnUIRender() override {
         // settings window
         ImGui::Begin("Settings");
+        ImGui::Checkbox("Render", &m_ShouldRender);
         ImGui::Text("Last Render Time: %.3f ms", m_LastRenderTime);
         ImGui::Text("%.1f FPS", 1000.0f / m_LastRenderTime);
         ImGui::Text("Render Resolution: %dx%d", m_ViewportWidth, m_ViewportHeight);
@@ -63,15 +62,12 @@ class MainLayer : public Walnut::Layer {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("Viewport");
 
-        m_ViewportWidth =
-            (uint32_t)(m_Renderer.GetSettings().RenderScale * ImGui::GetContentRegionAvail().x);
-        m_ViewportHeight =
-            (uint32_t)(m_Renderer.GetSettings().RenderScale * ImGui::GetContentRegionAvail().y);
+        m_ViewportWidth = (uint32_t)(m_Renderer.GetSettings().RenderScale * ImGui::GetContentRegionAvail().x);
+        m_ViewportHeight = (uint32_t)(m_Renderer.GetSettings().RenderScale * ImGui::GetContentRegionAvail().y);
 
         auto image = m_Renderer.GetFinalImage();
         if (image) {
-            ImGui::Image(image->GetDescriptorSet(), ImGui::GetContentRegionAvail(), ImVec2(0, 1),
-                         ImVec2(1, 0));
+            ImGui::Image(image->GetDescriptorSet(), ImGui::GetContentRegionAvail(), ImVec2(0, 1), ImVec2(1, 0));
         }
 
         ImGui::End();
@@ -81,6 +77,10 @@ class MainLayer : public Walnut::Layer {
     }
 
     void Render() {
+        if (!m_ShouldRender) {
+            return;
+        }
+
         Walnut::Timer timer;
 
         m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
@@ -94,22 +94,23 @@ class MainLayer : public Walnut::Layer {
     void SaveImage() {
         auto image = m_Renderer.GetImageData();
         if (image) {
+            // flip image vertically
             uint32_t *flippedImage = new uint32_t[m_ViewportWidth * m_ViewportHeight];
-
             for (uint32_t y = 0; y < m_ViewportHeight; y++) {
-                memcpy(&flippedImage[y * m_ViewportWidth],
-                       &image[(m_ViewportHeight - y - 1) * m_ViewportWidth], m_ViewportWidth * 4);
+                memcpy(&flippedImage[y * m_ViewportWidth], &image[(m_ViewportHeight - y - 1) * m_ViewportWidth],
+                       m_ViewportWidth * 4);
             }
 
             std::filesystem::create_directory("snapshots");
 
             const std::string filename = "snapshots/" + std::string(m_SaveFilename) + ".png";
-            stbi_write_png(filename.c_str(), m_ViewportWidth, m_ViewportHeight, 4, flippedImage,
-                           m_ViewportWidth * 4);
+            stbi_write_png(filename.c_str(), m_ViewportWidth, m_ViewportHeight, 4, flippedImage, m_ViewportWidth * 4);
         }
     }
 
   private:
+    bool m_ShouldRender = true;
+
     Renderer m_Renderer;
     Camera m_Camera;
     Scene m_Scene;

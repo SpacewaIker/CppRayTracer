@@ -2,7 +2,7 @@
 #include "SDFGeometry.h"
 
 #define SDF_MAX_ITERATIONS 500
-#define SDF_EPSILON 0.0001f
+#define SDF_EPSILON 0.001f
 #define SDF_MAX_DEPTH 1000.0f
 
 float SDFGeometry::Intersect(const Ray &ray) const {
@@ -31,12 +31,10 @@ float SDFGeometry::Intersect(const Ray &ray) const {
 
 glm::vec3 SDFGeometry::GetNormal(const glm::vec3 &point) const {
     float epsilon = 0.0001f;
-    glm::vec3 normal = glm::vec3(Distance(point + glm::vec3(epsilon, 0.0f, 0.0f)) -
-                                     Distance(point - glm::vec3(epsilon, 0.0f, 0.0f)),
-                                 Distance(point + glm::vec3(0.0f, epsilon, 0.0f)) -
-                                     Distance(point - glm::vec3(0.0f, epsilon, 0.0f)),
-                                 Distance(point + glm::vec3(0.0f, 0.0f, epsilon)) -
-                                     Distance(point - glm::vec3(0.0f, 0.0f, epsilon)));
+    glm::vec3 normal =
+        glm::vec3(Distance(point + glm::vec3(epsilon, 0.0f, 0.0f)) - Distance(point - glm::vec3(epsilon, 0.0f, 0.0f)),
+                  Distance(point + glm::vec3(0.0f, epsilon, 0.0f)) - Distance(point - glm::vec3(0.0f, epsilon, 0.0f)),
+                  Distance(point + glm::vec3(0.0f, 0.0f, epsilon)) - Distance(point - glm::vec3(0.0f, 0.0f, epsilon)));
 
     return glm::normalize(normal);
 }

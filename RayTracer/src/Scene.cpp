@@ -117,8 +117,8 @@ std::unique_ptr<Geometry> ParseGeometry(const toml::table *table) {
         return ParseAABB(table);
     } else if (type == "transform") {
         return ParseTransform(table);
-    } else if (type == "sdfsphere" || type == "sdfhollowsphere" || type == "sdfplane" ||
-               type == "sdfconstructive" || type == "sdfaabb") {
+    } else if (type == "sdfsphere" || type == "sdfhollowsphere" || type == "sdfplane" || type == "sdfconstructive" ||
+               type == "sdfaabb") {
         return ParseSDFGeometry(table);
     } else {
         std::cerr << "Unknown geometry type: " << type << ". skipping..." << std::endl;
@@ -171,8 +171,7 @@ std::unique_ptr<Plane> ParsePlane(const toml::table *table) {
     int material2Valid = material2 ? (int)material2->get() : -1;
 
     if (position && normal) {
-        return std::make_unique<Plane>(ParseVec3(position), ParseVec3(normal), materialValid,
-                                       material2Valid);
+        return std::make_unique<Plane>(ParseVec3(position), ParseVec3(normal), materialValid, material2Valid);
     }
 
     std::cerr << "Invalid plane geometry. skipping..." << std::endl;
@@ -205,8 +204,7 @@ std::unique_ptr<Transform> ParseTransform(const toml::table *table) {
     if (child) {
         auto childParsed = ParseGeometry(child);
         if (childParsed) {
-            return std::make_unique<Transform>(translationValid, rotationValid, scaleValid,
-                                               std::move(childParsed));
+            return std::make_unique<Transform>(translationValid, rotationValid, scaleValid, std::move(childParsed));
         }
     }
 
@@ -221,8 +219,7 @@ std::unique_ptr<SDFSphere> ParseSDFSphere(const toml::table *table) {
     int materialValid = material ? (int)material->get() : 0;
 
     if (position && radius) {
-        return std::make_unique<SDFSphere>(ParseVec3(position), (float)radius->get(),
-                                           materialValid);
+        return std::make_unique<SDFSphere>(ParseVec3(position), (float)radius->get(), materialValid);
     }
 
     std::cerr << "Invalid sdfsphere geometry. skipping..." << std::endl;
@@ -238,8 +235,7 @@ std::unique_ptr<SDFPlane> ParseSDFPlane(const toml::table *table) {
     int material2Valid = material2 ? (int)material2->get() : -1;
 
     if (position && normal) {
-        return std::make_unique<SDFPlane>(ParseVec3(position), ParseVec3(normal), materialValid,
-                                          material2Valid);
+        return std::make_unique<SDFPlane>(ParseVec3(position), ParseVec3(normal), materialValid, material2Valid);
     }
 
     std::cerr << "Invalid sdfplane geometry. skipping..." << std::endl;
@@ -255,8 +251,7 @@ std::unique_ptr<SDFAABB> ParseSDFAABB(const toml::table *table) {
     float roundedValid = rounded ? (float)rounded->get() : 0.0f;
 
     if (min && max) {
-        return std::make_unique<SDFAABB>(ParseVec3(min), ParseVec3(max), roundedValid,
-                                         materialValid);
+        return std::make_unique<SDFAABB>(ParseVec3(min), ParseVec3(max), roundedValid, materialValid);
     }
 
     std::cerr << "Invalid sdfAABB geometry. skipping..." << std::endl;
@@ -272,9 +267,8 @@ std::unique_ptr<SDFHollowSphere> ParseSDFHollowSphere(const toml::table *table) 
     int materialValid = material ? (int)material->get() : 0;
 
     if (position && radius && thickness && height) {
-        return std::make_unique<SDFHollowSphere>(ParseVec3(position), (float)radius->get(),
-                                                 (float)thickness->get(), (float)height->get(),
-                                                 materialValid);
+        return std::make_unique<SDFHollowSphere>(ParseVec3(position), (float)radius->get(), (float)thickness->get(),
+                                                 (float)height->get(), materialValid);
     }
     return nullptr;
 }
@@ -288,17 +282,13 @@ std::unique_ptr<SDFConstructive> ParseSDFConstructive(const toml::table *table) 
 
     SDFConstructive::Operation op;
     if (operation == "union") {
-        op =
-            smoothing ? SDFConstructive::Operation::SmoothUnion : SDFConstructive::Operation::Union;
+        op = smoothing ? SDFConstructive::Operation::SmoothUnion : SDFConstructive::Operation::Union;
     } else if (operation == "difference") {
-        op = smoothing ? SDFConstructive::Operation::SmoothDifference
-                       : SDFConstructive::Operation::Difference;
+        op = smoothing ? SDFConstructive::Operation::SmoothDifference : SDFConstructive::Operation::Difference;
     } else if (operation == "intersection") {
-        op = smoothing ? SDFConstructive::Operation::SmoothIntersection
-                       : SDFConstructive::Operation::Intersection;
+        op = smoothing ? SDFConstructive::Operation::SmoothIntersection : SDFConstructive::Operation::Intersection;
     } else {
-        std::cerr << "Invalid operation for constructive SDF: " << operation << ". skipping..."
-                  << std::endl;
+        std::cerr << "Invalid operation for constructive SDF: " << operation << ". skipping..." << std::endl;
         return nullptr;
     }
 
@@ -310,8 +300,8 @@ std::unique_ptr<SDFConstructive> ParseSDFConstructive(const toml::table *table) 
         auto rightParsed = ParseSDFGeometry(right);
 
         if (leftParsed && rightParsed) {
-            return std::make_unique<SDFConstructive>(
-                op, std::move(leftParsed), std::move(rightParsed), materialValid, smoothingValid);
+            return std::make_unique<SDFConstructive>(op, std::move(leftParsed), std::move(rightParsed), materialValid,
+                                                     smoothingValid);
         }
     }
 
@@ -392,14 +382,17 @@ Camera SceneLoader::LoadCameraSettings(const std::string &path) {
     auto position = table.get_as<toml::array>("camera_position");
     auto positionValid = position ? ParseVec3(position) : glm::vec3{0.0f};
     auto forwardDirection = table.get_as<toml::array>("camera_forward_direction");
-    auto forwardDirectionValid =
-        forwardDirection ? ParseVec3(forwardDirection) : glm::vec3{0.0f, 0.0f, 1.0f};
+    auto lookat = table.get_as<toml::array>("camera_lookat");
+    glm::vec3 forwardDirectionValid{0.0f, 0.0f, 1.0f};
+    if (forwardDirection) {
+        forwardDirectionValid = ParseVec3(forwardDirection);
+    } else if (lookat) {
+        forwardDirectionValid = glm::normalize(ParseVec3(lookat) - positionValid);
+    }
 
     if (sensorHeight || focalLength) {
-        return Camera(sensorHeightValid, focalLengthValid, nearPlaneValid, farPlaneValid,
-                      positionValid, forwardDirectionValid);
+        return Camera(sensorHeightValid, focalLengthValid, nearPlaneValid, farPlaneValid, positionValid, forwardDirectionValid);
     } else {
-        return Camera(verticalFOVValid, nearPlaneValid, farPlaneValid, positionValid,
-                      forwardDirectionValid);
+        return Camera(verticalFOVValid, nearPlaneValid, farPlaneValid, positionValid, forwardDirectionValid);
     }
 }

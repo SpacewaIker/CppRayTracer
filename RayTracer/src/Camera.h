@@ -13,10 +13,9 @@ class Camera {
      * @param position Camera position.
      * @param forwardDirection Camera forward direction.
      */
-    Camera(float verticalFOV, float nearPlane, float farPlane, glm::vec3 position,
-           glm::vec3 forwardDirection)
-        : m_VerticalFOV(verticalFOV), m_NearPlane(nearPlane), m_FarPlane(farPlane),
-          m_Position(position), m_ForwardDirection(forwardDirection) {}
+    Camera(float verticalFOV, float nearPlane, float farPlane, glm::vec3 position, glm::vec3 forwardDirection)
+        : m_VerticalFOV(verticalFOV), m_NearPlane(nearPlane), m_FarPlane(farPlane), m_Position(position),
+          m_ForwardDirection(glm::normalize(forwardDirection)) {}
 
     /**
      * @param sensorHeight Sensor height in mm.
@@ -26,10 +25,9 @@ class Camera {
      * @param position Camera position.
      * @param forwardDirection Camera forward direction.
      */
-    Camera(float sensorHeight, float focalLength, float nearPlane, float farPlane,
-           glm::vec3 position, glm::vec3 forwardDirection)
+    Camera(float sensorHeight, float focalLength, float nearPlane, float farPlane, glm::vec3 position, glm::vec3 forwardDirection)
         : m_NearPlane(nearPlane), m_FarPlane(farPlane), m_Position(position),
-          m_ForwardDirection(forwardDirection) {
+          m_ForwardDirection(glm::normalize(forwardDirection)) {
         m_VerticalFOV = 2.0f * glm::degrees(atan(sensorHeight / (2.0f * focalLength)));
     }
 
@@ -73,8 +71,8 @@ class Camera {
     float m_NearPlane = 0.1f;
     float m_FarPlane = 100.0f;
 
-    glm::vec3 m_Position{0.0f, 0.0f, 0.0f};
-    glm::vec3 m_ForwardDirection{0.0f, 0.0f, -1.0f};
+    glm::vec3 m_Position;
+    glm::vec3 m_ForwardDirection;
 
     std::vector<glm::vec3> m_RayDirections;
 
