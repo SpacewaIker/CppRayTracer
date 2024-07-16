@@ -24,26 +24,26 @@ bool Camera::OnUpdate(float deltaTime) {
     bool moved = false;
 
     constexpr glm::vec3 UP(0.0f, 1.0f, 0.0f);
-    glm::vec3 right = glm::cross(m_ForwardDirection, UP);
+    glm::vec3 right = glm::cross(m_Settings.ForwardDirection, UP);
 
     // movement controls
     if (Walnut::Input::IsKeyDown(Walnut::Key::W)) { // forward
-        m_Position += m_ForwardDirection * m_MovementSpeed * deltaTime;
+        m_Settings.Position += m_Settings.ForwardDirection * m_MovementSpeed * deltaTime;
         moved = true;
     } else if (Walnut::Input::IsKeyDown(Walnut::Key::S)) { // backward
-        m_Position -= m_ForwardDirection * m_MovementSpeed * deltaTime;
+        m_Settings.Position -= m_Settings.ForwardDirection * m_MovementSpeed * deltaTime;
         moved = true;
     } else if (Walnut::Input::IsKeyDown(Walnut::Key::A)) { // left
-        m_Position -= right * m_MovementSpeed * deltaTime;
+        m_Settings.Position -= right * m_MovementSpeed * deltaTime;
         moved = true;
     } else if (Walnut::Input::IsKeyDown(Walnut::Key::D)) { // right
-        m_Position += right * m_MovementSpeed * deltaTime;
+        m_Settings.Position += right * m_MovementSpeed * deltaTime;
         moved = true;
     } else if (Walnut::Input::IsKeyDown(Walnut::Key::Q)) { // down
-        m_Position -= UP * m_MovementSpeed * deltaTime;
+        m_Settings.Position -= UP * m_MovementSpeed * deltaTime;
         moved = true;
     } else if (Walnut::Input::IsKeyDown(Walnut::Key::E)) { // up
-        m_Position += UP * m_MovementSpeed * deltaTime;
+        m_Settings.Position += UP * m_MovementSpeed * deltaTime;
         moved = true;
     }
 
@@ -53,7 +53,7 @@ bool Camera::OnUpdate(float deltaTime) {
         float yawDelta = delta.x * GetRotationSpeed();
 
         glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, right), glm::angleAxis(-yawDelta, UP)));
-        m_ForwardDirection = glm::rotate(q, m_ForwardDirection);
+        m_Settings.ForwardDirection = glm::rotate(q, m_Settings.ForwardDirection);
 
         moved = true;
     }
@@ -83,13 +83,14 @@ void Camera::OnResize(uint32_t width, uint32_t height) {
 float Camera::GetRotationSpeed() { return 0.3f; }
 
 void Camera::RecalculateProjectionMatrix() {
-    m_ProjectionMatrix = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)m_ViewportWidth, (float)m_ViewportHeight,
-                                             m_NearPlane, m_FarPlane);
+    m_ProjectionMatrix = glm::perspectiveFov(glm::radians(m_Settings.VerticalFOV), (float)m_ViewportWidth,
+                                             (float)m_ViewportHeight, m_Settings.NearPlane, m_Settings.FarPlane);
     m_InverseProjection = glm::inverse(m_ProjectionMatrix);
 }
 
 void Camera::RecalculateViewMatrix() {
-    m_ViewMatrix = glm::lookAt(m_Position, m_Position + m_ForwardDirection, glm::vec3(0.0f, 1.0f, 0.0f));
+    m_ViewMatrix =
+        glm::lookAt(m_Settings.Position, m_Settings.Position + m_Settings.ForwardDirection, glm::vec3(0.0f, 1.0f, 0.0f));
     m_InverseView = glm::inverse(m_ViewMatrix);
 }
 
@@ -106,4 +107,10 @@ void Camera::RecalculateRayDirections() {
             m_RayDirections[y * m_ViewportWidth + x] = rayDir;
         }
     }
+}
+
+void Camera::OnChangeSettings() {
+    RecalculateProjectionMatrix();
+    RecalculateViewMatrix();
+    RecalculateRayDirections();
 }

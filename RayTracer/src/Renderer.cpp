@@ -92,7 +92,7 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y) {
     seed ^= ms;
 
     Ray ray;
-    ray.Origin = m_ActiveCamera->GetPosition();
+    ray.Origin = m_ActiveCamera->GetSettings().Position;
     if (m_Settings.Jitter) {
         ray.Origin += RTRandom::Vec3(seed, -0.003f, 0.003f);
     }

@@ -6,6 +6,15 @@
 /// Camera class that handles the camera movement and projection matrices.
 class Camera {
   public:
+    struct CameraSettings {
+        float VerticalFOV;
+        float NearPlane;
+        float FarPlane;
+        glm::vec3 Position;
+        glm::vec3 ForwardDirection;
+    };
+
+  public:
     /**
      * @param verticalFOV Vertical field of view in degrees.
      * @param nearPlane Near plane distance.
@@ -14,22 +23,7 @@ class Camera {
      * @param forwardDirection Camera forward direction.
      */
     Camera(float verticalFOV, float nearPlane, float farPlane, glm::vec3 position, glm::vec3 forwardDirection)
-        : m_VerticalFOV(verticalFOV), m_NearPlane(nearPlane), m_FarPlane(farPlane), m_Position(position),
-          m_ForwardDirection(glm::normalize(forwardDirection)) {}
-
-    /**
-     * @param sensorHeight Sensor height in mm.
-     * @param focalLength Focal length in mm.
-     * @param nearPlane Near plane distance.
-     * @param farPlane Far plane distance.
-     * @param position Camera position.
-     * @param forwardDirection Camera forward direction.
-     */
-    Camera(float sensorHeight, float focalLength, float nearPlane, float farPlane, glm::vec3 position, glm::vec3 forwardDirection)
-        : m_NearPlane(nearPlane), m_FarPlane(farPlane), m_Position(position),
-          m_ForwardDirection(glm::normalize(forwardDirection)) {
-        m_VerticalFOV = 2.0f * glm::degrees(atan(sensorHeight / (2.0f * focalLength)));
-    }
+        : m_Settings({verticalFOV, nearPlane, farPlane, position, forwardDirection}) {}
 
     /**
      * Updates the camera position and rotation based on the input.
@@ -43,16 +37,20 @@ class Camera {
      * @param height New window height.
      */
     void OnResize(uint32_t width, uint32_t height);
+    /**
+     * Updates the camera data when the settings are changed.
+     */
+    void OnChangeSettings();
 
     const glm::mat4 &GetProjectionMatrix() const { return m_ProjectionMatrix; }
     const glm::mat4 &GetViewMatrix() const { return m_ViewMatrix; }
     const glm::mat4 &GetInverseProjection() const { return m_InverseProjection; }
     const glm::mat4 &GetInverseView() const { return m_InverseView; }
 
-    const glm::vec3 &GetPosition() const { return m_Position; }
-    const glm::vec3 &GetForwardDirection() const { return m_ForwardDirection; }
-
     const std::vector<glm::vec3> &GetRayDirections() const { return m_RayDirections; }
+
+    CameraSettings &GetSettings() { return m_Settings; }
+    const CameraSettings &GetSettings() const { return m_Settings; }
 
     float GetRotationSpeed();
 
@@ -62,17 +60,12 @@ class Camera {
     void RecalculateRayDirections();
 
   private:
+    CameraSettings m_Settings;
+
     glm::mat4 m_ProjectionMatrix{1.0f};
     glm::mat4 m_ViewMatrix{1.0f};
     glm::mat4 m_InverseProjection{1.0f};
     glm::mat4 m_InverseView{1.0f};
-
-    float m_VerticalFOV = 45.0f; // in degrees
-    float m_NearPlane = 0.1f;
-    float m_FarPlane = 100.0f;
-
-    glm::vec3 m_Position;
-    glm::vec3 m_ForwardDirection;
 
     std::vector<glm::vec3> m_RayDirections;
 

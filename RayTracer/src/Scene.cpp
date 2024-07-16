@@ -371,10 +371,6 @@ Camera SceneLoader::LoadCameraSettings(const std::string &path) {
 
     auto verticalFOV = table.get_as<toml::value<double>>("vertical_fov");
     float verticalFOVValid = verticalFOV ? (float)verticalFOV->get() : 45.0f;
-    auto sensorHeight = table.get_as<toml::value<double>>("sensor_height");
-    float sensorHeightValid = sensorHeight ? (float)sensorHeight->get() : 24.0f;
-    auto focalLength = table.get_as<toml::value<double>>("focal_length");
-    float focalLengthValid = focalLength ? (float)focalLength->get() : 28.0f;
     auto nearPlane = table.get_as<toml::value<double>>("near_plane");
     float nearPlaneValid = nearPlane ? (float)nearPlane->get() : 0.1f;
     auto farPlane = table.get_as<toml::value<double>>("far_plane");
@@ -382,17 +378,61 @@ Camera SceneLoader::LoadCameraSettings(const std::string &path) {
     auto position = table.get_as<toml::array>("camera_position");
     auto positionValid = position ? ParseVec3(position) : glm::vec3{0.0f};
     auto forwardDirection = table.get_as<toml::array>("camera_forward_direction");
-    auto lookat = table.get_as<toml::array>("camera_lookat");
-    glm::vec3 forwardDirectionValid{0.0f, 0.0f, 1.0f};
-    if (forwardDirection) {
-        forwardDirectionValid = ParseVec3(forwardDirection);
-    } else if (lookat) {
-        forwardDirectionValid = glm::normalize(ParseVec3(lookat) - positionValid);
-    }
+    glm::vec3 forwardDirectionValid = forwardDirection ? ParseVec3(forwardDirection) : glm::vec3{0.0f, 0.0f, 1.0f};
 
-    if (sensorHeight || focalLength) {
-        return Camera(sensorHeightValid, focalLengthValid, nearPlaneValid, farPlaneValid, positionValid, forwardDirectionValid);
-    } else {
-        return Camera(verticalFOVValid, nearPlaneValid, farPlaneValid, positionValid, forwardDirectionValid);
-    }
+    return Camera(verticalFOVValid, nearPlaneValid, farPlaneValid, positionValid, forwardDirectionValid);
+}
+
+void SceneLoader::SaveScene(const std::string &path, const Scene &scene, const Camera &camera) {
+    toml::table table;
+
+    // sky colour
+    table.insert("sky_colour", toml::array{scene.SkyColour.x, scene.SkyColour.y, scene.SkyColour.z});
+
+    // camera settings
+    table.insert("vertical_fov", camera.GetSettings().VerticalFOV);
+    table.insert("near_plane", camera.GetSettings().NearPlane);
+    table.insert("far_plane", camera.GetSettings().FarPlane);
+    glm::vec3 position = camera.GetSettings().Position;
+    table.insert("camera_position", toml::array{position.x, position.y, position.z});
+    glm::vec3 forwardDirection = camera.GetSettings().ForwardDirection;
+    table.insert("camera_forward_direction", toml::array{forwardDirection.x, forwardDirection.y, forwardDirection.z});
+
+    // materials
+    // toml::array materials;
+    // for (const auto &material : scene.Materials) {
+    //     toml::table materialTable;
+    //     materialTable["colour"] = toml::array{material.Colour.x, material.Colour.y, material.Colour.z};
+    //     materialTable["emission"] = toml::array{material.Emission.x, material.Emission.y, material.Emission.z};
+    //     materialTable["reflection"] = material.Reflection;
+    //     materialTable["refraction"] = material.Refraction;
+    //     materialTable["ior"] = material.IOR;
+    //     materials.push_back(materialTable);
+    // }
+    // table["materials"] = materials;
+    //
+    // // geometry
+    // toml::array geometry;
+    // for (const auto &g : scene.Geometry) {
+    //     toml::table geometryTable;
+    //     g->Save(geometryTable);
+    //     geometry.push_back(geometryTable);
+    // }
+    // table["geometry"] = geometry;
+    //
+    // // lights
+    // toml::array lights;
+    // for (const auto &light : scene.Lights) {
+    //     toml::table lightTable;
+    //     lightTable["position"] = toml::array{light.Position.x, light.Position.y, light.Position.z};
+    //     lightTable["colour"] = toml::array{light.Colour.x, light.Colour.y, light.Colour.z};
+    //     lightTable["intensity"] = light.Intensity;
+    //     lights.push_back(lightTable);
+    // }
+    // table["lights"] = lights;
+
+    // save scene file
+    std::ofstream file(path);
+    file << table;
+    file.close();
 }

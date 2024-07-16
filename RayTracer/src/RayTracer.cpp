@@ -73,6 +73,29 @@ class MainLayer : public Walnut::Layer {
         ImGui::End();
         ImGui::PopStyleVar();
 
+        // scene window
+        ImGui::Begin("Scene");
+
+        bool sceneChanged = false;
+
+        // global scene elements
+        sceneChanged |= ImGui::SliderFloat("Vertical FOV", &m_Camera.GetSettings().VerticalFOV, 1.0f, 179.0f);
+        sceneChanged |= ImGui::SliderFloat("Near Plane", &m_Camera.GetSettings().NearPlane, 0.01f, 1.0f);
+        sceneChanged |= ImGui::SliderFloat("Far Plane", &m_Camera.GetSettings().FarPlane, 10.0f, 1000.0f);
+        sceneChanged |= ImGui::DragFloat3("Camera Position", glm::value_ptr(m_Camera.GetSettings().Position), 0.1f);
+        sceneChanged |=
+            ImGui::DragFloat3("Camera Forward Direction", glm::value_ptr(m_Camera.GetSettings().ForwardDirection), 0.1f);
+        sceneChanged |= ImGui::ColorEdit3("Sky Colour", glm::value_ptr(m_Scene.SkyColour));
+
+        // save scene on ui change
+        if (sceneChanged) {
+            m_Renderer.ResetFrameIndex();
+            m_Camera.OnChangeSettings();
+            SceneLoader::SaveScene("saved_scene.toml", m_Scene, m_Camera);
+        }
+
+        ImGui::End();
+
         Render();
     }
 

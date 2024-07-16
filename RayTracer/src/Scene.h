@@ -19,4 +19,5 @@ struct Scene {
 namespace SceneLoader {
 Scene LoadScene(const std::string &path);
 Camera LoadCameraSettings(const std::string &path);
+void SaveScene(const std::string &path, const Scene &scene, const Camera &camera);
 } // namespace SceneLoader
