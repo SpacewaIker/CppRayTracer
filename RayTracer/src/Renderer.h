@@ -31,6 +31,13 @@ class Renderer {
     Settings &GetSettings() { return m_Settings; }
     uint32_t *GetImageData() { return m_ImageData; }
 
+    void SetImageData(uint32_t *data) {
+        m_ImageData = data;
+        if (m_FinalImage) {
+            m_FinalImage->SetData(data);
+        }
+    }
+
   private:
     struct HitPayload {
         Intersection Intersection;

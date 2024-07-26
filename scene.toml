@@ -1,6 +1,5 @@
 camera_position = [-2.5, 2.0, -0.5]
-# camera_forward_direction = [1.0, -0.5, 0.0]
-camera_lookat = [1.0, 0.0, -0.5]
+camera_forward_direction = [1.0, -0.5, 0.0]
 vertical_fov = 50.0
 sky_colour = [0.06, 0.06, 0.12]
 

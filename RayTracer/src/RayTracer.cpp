@@ -5,6 +5,12 @@
 #include "Walnut/EntryPoint.h"
 #include "Walnut/Image.h"
 #include "Walnut/Timer.h"
+#include "kompute/Algorithm.hpp"
+#include "kompute/Core.hpp"
+#include "kompute/Manager.hpp"
+#include "kompute/operations/OpAlgoDispatch.hpp"
+#include "kompute/operations/OpTensorSyncDevice.hpp"
+#include "kompute/operations/OpTensorSyncLocal.hpp"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
@@ -12,9 +18,62 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
 
+#define KOMPUTE_DEVICE_INDEX 1
+
+std::vector<uint32_t> compileSource(const std::string &source) {
+    std::ofstream fileOut("tmp_kp_shader.comp");
+    fileOut << source;
+    fileOut.close();
+    if (system(std::string("glslangValidator -V tmp_kp_shader.comp -o tmp_kp_shader.comp.spv").c_str())) {
+        throw std::runtime_error("Error running glslangValidator command");
+    }
+    std::ifstream fileStream("tmp_kp_shader.comp.spv", std::ios::binary);
+    std::vector<char> buffer;
+    buffer.insert(buffer.begin(), std::istreambuf_iterator<char>(fileStream), {});
+    return {reinterpret_cast<uint32_t *>(buffer.data()), reinterpret_cast<uint32_t *>(buffer.data() + buffer.size())};
+}
+
 class MainLayer : public Walnut::Layer {
   public:
-    MainLayer() : m_Camera(SceneLoader::LoadCameraSettings("camera.toml")), m_Scene(SceneLoader::LoadScene("scene.toml")) {}
+    MainLayer() : m_Camera(SceneLoader::LoadCameraSettings("camera.toml")), m_Scene(SceneLoader::LoadScene("scene.toml")) {
+        m_SpirVShader = compileSource(R"(
+            #version 450
+
+            layout (local_size_x = 1) in;
+
+            layout(set = 0, binding = 0) buffer buf_out_a { uint out_a[]; };
+
+            layout(constant_id = 0) const float viewportWidth = 0;
+            layout(constant_id = 1) const float viewportHeight = 0;
+
+            void main() {
+                for (uint i = 0; i < uint(viewportWidth); i++) {
+                    for (uint j = 0; j < uint(viewportHeight); j++) {
+                        uint index = i + j * uint(viewportWidth);
+                        uint red = uint(float(i) / float(viewportWidth) * 255.0);
+                        uint green = uint(float(j) / float(viewportHeight) * 255.0);
+                        out_a[index] = 0xFF000000 | (green << 8) | red;
+                    }
+                }
+            }
+        )");
+
+        // initialize vector of size m_ViewportWidth *m_ViewportHeight
+        std::vector<uint32_t> data = std::vector<uint32_t>(m_ViewportWidth * m_ViewportHeight, 0);
+        m_TensorOut = m_KomputeManager.tensorT<uint32_t>(data);
+
+        m_TensorParams = {m_TensorOut};
+
+        kp::Workgroup workgroup({m_TensorOut->size(), 1, 1});
+        std::vector<float> specConsts({(float)m_ViewportWidth, (float)m_ViewportHeight});
+
+        m_Algorithm = m_KomputeManager.algorithm(m_TensorParams, m_SpirVShader, workgroup, specConsts);
+
+        m_KomputeManager.sequence()
+            ->record<kp::OpTensorSyncDevice>(m_TensorParams)
+            ->record<kp::OpAlgoDispatch>(m_Algorithm)
+            ->eval();
+    }
 
     virtual void OnUpdate(float deltaTime) override {
         if (m_Camera.OnUpdate(deltaTime)) { // if camera moved
@@ -106,9 +165,15 @@ class MainLayer : public Walnut::Layer {
 
         Walnut::Timer timer;
 
-        m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
-        m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
-        m_Renderer.Render(m_Scene, m_Camera);
+        // m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+        // m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
+        // m_Renderer.Render(m_Scene, m_Camera);
+
+        auto sq = m_KomputeManager.sequence();
+        sq->evalAsync<kp::OpTensorSyncLocal>(m_TensorParams);
+        sq->evalAwait();
+
+        m_Renderer.SetImageData(m_TensorOut->data());
 
         m_LastRenderTime = timer.ElapsedMillis();
     }
@@ -138,12 +203,18 @@ class MainLayer : public Walnut::Layer {
     Camera m_Camera;
     Scene m_Scene;
 
-    uint32_t m_ViewportWidth = 0;
-    uint32_t m_ViewportHeight = 0;
+    uint32_t m_ViewportWidth = 594;
+    uint32_t m_ViewportHeight = 424;
 
     float m_LastRenderTime = 0.0f;
 
     char m_SaveFilename[256] = "output";
+
+    std::vector<uint32_t> m_SpirVShader = {};
+    std::shared_ptr<kp::TensorT<uint32_t>> m_TensorOut = nullptr;
+    kp::Manager m_KomputeManager{KOMPUTE_DEVICE_INDEX};
+    std::vector<std::shared_ptr<kp::Tensor>> m_TensorParams = {};
+    std::shared_ptr<kp::Algorithm> m_Algorithm = nullptr;
 };
 
 Walnut::Application *Walnut::CreateApplication(int argc, char **argv) {

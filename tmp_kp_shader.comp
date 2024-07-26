@@ -1,0 +1,21 @@
+
+            #version 450
+
+            layout (local_size_x = 1) in;
+
+            layout(set = 0, binding = 0) buffer buf_out_a { uint out_a[]; };
+
+            layout(constant_id = 0) const float viewportWidth = 0;
+            layout(constant_id = 1) const float viewportHeight = 0;
+
+            void main() {
+                for (uint i = 0; i < uint(viewportWidth); i++) {
+                    for (uint j = 0; j < uint(viewportHeight); j++) {
+                        uint index = i + j * uint(viewportWidth);
+                        uint red = uint(float(i) / float(viewportWidth) * 255.0);
+                        uint green = uint(float(j) / float(viewportHeight) * 255.0);
+                        out_a[index] = 0xFF000000 | (green << 8) | red;
+                    }
+                }
+            }
+        
